@@ -1,0 +1,1743 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Hokejbal">
+<meta name="theme-color" content="#0f1a10">
+<link id="apple-touch-icon" rel="apple-touch-icon" href="">
+<link id="pwa-manifest" rel="manifest">
+<title>Hokejbal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --red:#e63946;--red2:#c1121f;--red-bg:#fde8ea;
+  --green:#2d9e5f;--green2:#1a6640;--green-bg:#d4f0e2;
+  --white:#f8fafc;--bg:#eef1ee;--surface:#ffffff;--surface2:#f3f6f3;
+  --border:#dde5dd;--dark:#0f1a10;--muted:#6b7d6e;--text:#1c2b1e;
+  --gold:#f4b942;--gold-bg:#fef3dc;
+}
+body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;min-height:100vh;overflow-x:hidden;}
+
+/* HEADER */
+.header{
+  background:var(--dark);border-bottom:3px solid var(--red);
+  padding:0 12px;display:flex;align-items:center;gap:10px;
+  height:58px;position:sticky;top:0;z-index:100;
+  box-shadow:0 2px 20px rgba(0,0,0,0.4);
+  width:100%;min-width:0;
+}
+.logo-wrap{
+  position:relative;width:44px;height:44px;flex-shrink:0;overflow:visible;
+  display:flex;align-items:center;justify-content:center;
+}
+.logo-img{
+  border-radius:50%;object-fit:contain;
+  position:relative;
+  transition:width 0.2s, height 0.2s;
+}
+.logo-text-wrap{line-height:1.2;min-width:0;flex-shrink:1;}
+.logo-name{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;color:var(--white);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;}
+.logo-name span{color:var(--red);}
+.logo-sub{font-size:10px;color:var(--green);font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-top:1px;white-space:nowrap;}
+.nav{display:flex;gap:2px;margin-left:auto;flex-shrink:0;}
+.nav-btn{padding:6px 10px;border:none;background:transparent;color:#8fa88f;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;cursor:pointer;border-radius:4px;transition:all 0.15s;white-space:nowrap;}
+.nav-btn:hover{background:rgba(255,255,255,0.08);color:var(--white);}
+.nav-btn.active{background:var(--red);color:#fff;}
+@media(max-width:480px){
+  .logo-sub{display:none;}
+  .nav-btn{padding:5px 8px;font-size:11px;}
+}
+
+/* MAIN */
+.main{max-width:1100px;margin:0 auto;padding:28px 20px;}
+.page-title{font-family:'Barlow Condensed',sans-serif;font-size:34px;font-weight:900;color:var(--dark);text-transform:uppercase;letter-spacing:2px;margin-bottom:20px;border-left:4px solid var(--red);padding-left:12px;}
+
+/* CARD */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.card-title{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--dark);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:6px;border:none;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.15s;}
+.btn-primary{background:var(--red);color:#fff;}
+.btn-primary:hover{background:var(--red2);}
+.btn-green{background:var(--green);color:#fff;}
+.btn-green:hover{background:var(--green2);}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+.btn-secondary:hover{border-color:var(--red);color:var(--red);}
+.btn-gold{background:var(--gold);color:#1a1000;}
+.btn-gold:hover{filter:brightness(0.9);}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);}
+.btn-ghost:hover{color:var(--dark);border-color:var(--dark);}
+.btn-sm{padding:4px 10px;font-size:12px;}
+.btn-danger{background:var(--red-bg);color:var(--red2);border:1px solid #f5c2c6;}
+.btn-danger:hover{background:var(--red);color:#fff;}
+
+/* INPUT */
+.input{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-family:'Barlow',sans-serif;font-size:14px;outline:none;transition:border-color 0.15s;}
+.input:focus{border-color:var(--red);}
+.input::placeholder{color:var(--muted);}
+.form-group{margin-bottom:14px;}
+.form-label{display:block;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.form-row{display:flex;gap:12px;}
+.form-row .form-group{flex:1;}
+
+/* TABLE */
+.tbl{width:100%;border-collapse:collapse;min-width:480px;}
+.tbl th{text-align:left;padding:9px 12px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--border);background:var(--surface2);}
+.tbl th.sort{cursor:pointer;user-select:none;}
+.tbl th.sort:hover{color:var(--red);}
+.tbl td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:14px;}
+.tbl tr:last-child td{border-bottom:none;}
+.tbl tr.clk{cursor:pointer;}
+.tbl tr.clk:hover td{background:#fef8f8;}
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+
+/* BADGE */
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;}
+.badge-green{background:var(--green-bg);color:var(--green2);}
+.badge-red{background:var(--red-bg);color:var(--red2);}
+.badge-gold{background:var(--gold-bg);color:#7a5c1a;}
+.badge-muted{background:var(--surface2);color:var(--muted);}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(15,26,16,0.6);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px;backdrop-filter:blur(2px);}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);}
+.modal-title{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;color:var(--dark);text-transform:uppercase;letter-spacing:2px;margin-bottom:20px;border-left:4px solid var(--red);padding-left:10px;}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;border-top:1px solid var(--border);padding-top:16px;}
+
+/* SEASON GRID */
+.season-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:12px;}
+.scard{background:var(--surface);border:2px solid var(--border);border-radius:10px;padding:22px 16px;cursor:pointer;transition:all 0.15s;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.04);position:relative;}
+.scard:hover{border-color:var(--red);transform:translateY(-2px);box-shadow:0 4px 16px rgba(230,57,70,0.15);}
+.scard-name{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--dark);}
+.scard-sub{font-size:12px;color:var(--muted);margin-top:4px;}
+.scard-del{position:absolute;top:8px;right:8px;background:var(--red-bg);border:none;color:var(--red);border-radius:4px;width:22px;height:22px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.15s;}
+.scard:hover .scard-del{opacity:1;}
+.scard-del:hover{background:var(--red);color:#fff;}
+.scard-add{border-style:dashed;}
+.scard-add .scard-name{color:var(--muted);}
+
+/* PLAYER CHECK */
+.pclist{display:flex;flex-direction:column;gap:4px;max-height:340px;overflow-y:auto;padding-right:4px;}
+.pcitem{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;background:var(--surface2);user-select:none;border:1px solid transparent;transition:all 0.1s;}
+.pcitem:hover{background:#eef2ee;}
+.pcitem.cp{background:#e8f7ef;border-color:#b8e8d0;}
+.pcitem.ca{background:var(--red-bg);border-color:#f5c2c6;}
+.chkbox{width:20px;height:20px;border-radius:4px;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;cursor:pointer;transition:all 0.1s;}
+.chkbox.p{background:var(--green);border-color:var(--green);color:#fff;}
+.chkbox.a{background:var(--red);border-color:var(--red);color:#fff;}
+
+/* MATCH PILL */
+.match-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;margin:2px;}
+.mp-present{background:var(--green-bg);color:var(--green2);}
+.mp-absent{background:var(--red-bg);color:var(--red2);}
+
+/* FEE BAR */
+.fee-bar{background:var(--border);border-radius:4px;height:5px;margin-top:4px;overflow:hidden;}
+.fee-fill{height:100%;border-radius:4px;background:var(--green);transition:width 0.4s;}
+
+/* AVATAR */
+.avatar{width:54px;height:54px;border-radius:8px;background:var(--red);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;color:#fff;flex-shrink:0;}
+
+/* SETTINGS */
+.settings-section{margin-bottom:24px;}
+.settings-label{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.logo-preview{width:120px;height:120px;background:var(--surface2);border:2px dashed var(--border);border-radius:12px;display:flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:12px;position:relative;}
+.logo-preview img{max-width:100%;max-height:100%;object-fit:contain;}
+.slider-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.slider-row label{font-size:13px;color:var(--muted);width:80px;flex-shrink:0;}
+.slider-row input[type=range]{flex:1;accent-color:var(--red);}
+.slider-row span{width:40px;text-align:right;font-size:13px;font-weight:600;color:var(--dark);}
+
+.page{display:none;}.page.active{display:block;}
+hr.divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
+
+/* ITEMS */
+.item-row{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);margin-bottom:5px;}
+.item-row:last-child{margin-bottom:0;}
+.item-name{flex:1;font-size:14px;font-weight:600;color:var(--dark);}
+.item-amounts{font-size:13px;color:var(--muted);}
+.item-amounts strong{color:var(--dark);}
+.item-status{flex-shrink:0;}
+.items-section{margin-bottom:0;}
+
+</style>
+</head>
+<body>
+
+<header class="header" id="app-header">
+  <div class="logo-wrap" id="logo-wrap">
+    <img class="logo-img" id="header-logo" src="" alt="logo">
+  </div>
+  <div class="logo-text-wrap">
+    <div class="logo-name" id="header-name">Hokejbal</div>
+    <div class="logo-sub" id="header-sub">NFC Sparta Kladno</div>
+  </div>
+  <nav class="nav">
+    <button class="nav-btn active" onclick="showPage('home')">Sezóny</button>
+    <button class="nav-btn" onclick="showPage('players')">Hráči</button>
+    <button class="nav-btn" onclick="showPage('settings')">⚙️ Nastavení</button>
+  </nav>
+</header>
+
+<main class="main">
+
+<!-- HOME -->
+<div id="page-home" class="page active">
+  <div class="page-title">Sezóny</div>
+  <div class="season-grid" id="season-grid"></div>
+</div>
+
+<!-- PLAYERS -->
+<div id="page-players" class="page">
+  <div class="page-title">Hráči</div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
+    <input class="input" style="width:220px;" id="player-filter" placeholder="Hledat hráče..." oninput="renderPlayersTable()">
+    <select class="input" style="width:180px;" id="player-sort" onchange="renderPlayersTable()">
+      <option value="name">Řadit: Jméno</option>
+      <option value="number">Řadit: # Dres</option>
+    </select>
+    <button class="btn btn-primary" onclick="openModal('modal-add-player')">+ Přidat hráče</button>
+  </div>
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>Jméno</th><th># Dres</th><th>Vel.</th><th>Post</th><th></th></tr></thead>
+      <tbody id="players-tbody"></tbody>
+    </table>
+    </div>
+  </div>
+</div>
+
+<!-- SEASON DETAIL -->
+<div id="page-season" class="page">
+  <button class="btn btn-ghost" style="margin-bottom:20px;" onclick="showPage('home')">← Zpět</button>
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px;">
+    <div class="page-title" id="season-detail-title" style="margin-bottom:0;"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-green btn-sm" onclick="openSeasonAddPlayer()">+ Přidat hráče</button>
+      <button class="btn btn-gold btn-sm" onclick="openBulkFee()">💰 Hromadný poplatek</button>
+      <button class="btn btn-secondary btn-sm" onclick="openSeasonPaidSummary()">📊 Zaplaceno v sezóně</button>
+    </div>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div class="card-title" style="margin:0;">Zápasy</div>
+      <button class="btn btn-primary btn-sm" onclick="openAddMatch()">+ Přidat zápas</button>
+    </div>
+    <div id="matches-list" style="display:flex;flex-wrap:wrap;gap:6px;min-height:24px;"></div>
+  </div>
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div style="padding:14px 16px 0;">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+        <input class="input" style="width:200px;" id="sd-filter" placeholder="Hledat..." oninput="renderSeasonTable()">
+        <select class="input" style="width:170px;" id="sd-sort" onchange="renderSeasonTable()">
+          <option value="games">Nejvíce zápasů</option>
+          <option value="name">Jméno A–Z</option>
+          <option value="number">Číslo dresu</option>
+          <option value="paid">Zaplaceno</option>
+          <option value="debt">Největší dluh</option>
+        </select>
+        <select class="input" style="width:160px;" id="sd-paid" onchange="renderSeasonTable()">
+          <option value="all">Všichni</option>
+          <option value="paid">Zaplaceno</option>
+          <option value="unpaid">Nezaplaceno</option>
+        </select>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr>
+        <th style="width:36px;">#</th>
+        <th>Jméno</th><th>Dres</th><th>Zápasy</th><th>Finance</th><th>Stav</th><th></th>
+      </tr></thead>
+      <tbody id="season-tbody"></tbody>
+    </table>
+    </div>
+  </div>
+</div>
+
+<!-- PLAYER DETAIL -->
+<div id="page-player" class="page">
+  <button class="btn btn-ghost" id="player-back-btn" style="margin-bottom:20px;">← Zpět</button>
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;">
+    <div class="avatar" id="player-avatar"></div>
+    <div>
+      <div class="page-title" style="margin:0;" id="player-detail-name"></div>
+      <div style="color:var(--muted);font-size:13px;" id="player-detail-sub"></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-left:auto;align-items:flex-end;">
+      <button class="btn btn-ghost btn-sm" id="player-edit-btn">✏️ Upravit</button>
+      <button class="btn btn-danger btn-sm" id="player-debt-btn" onclick="openPlayerDebt()">💳 Celkový dluh</button>
+    </div>
+  </div>
+  <div id="player-seasons-list"></div>
+</div>
+
+<!-- MODAL: PLAYER TOTAL DEBT -->
+<div id="modal-player-debt" class="overlay" style="display:none;" onclick="if(event.target===this)closeModal('modal-player-debt')">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-title">Celkový dluh hráče</div>
+    <div style="color:var(--muted);font-size:13px;margin-bottom:18px;" id="player-debt-sub"></div>
+    <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:120px;background:var(--red-bg);border-radius:10px;padding:14px 16px;text-align:center;">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--red2);margin-bottom:5px;">Celkem dluží</div>
+        <div id="debt-total-remaining" style="font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:900;color:var(--red2);"></div>
+      </div>
+      <div style="flex:1;min-width:120px;background:var(--green-bg);border-radius:10px;padding:14px 16px;text-align:center;">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--green2);margin-bottom:5px;">Celkem zaplaceno</div>
+        <div id="debt-total-paid" style="font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:900;color:var(--green2);"></div>
+      </div>
+      <div style="flex:1;min-width:120px;background:var(--gold-bg);border-radius:10px;padding:14px 16px;text-align:center;">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#7a5c1a;margin-bottom:5px;">Celková částka</div>
+        <div id="debt-total-amount" style="font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:900;color:#7a5c1a;"></div>
+      </div>
+    </div>
+    <div id="debt-seasons-list" style="display:flex;flex-direction:column;gap:8px;max-height:380px;overflow-y:auto;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-player-debt')">Zavřít</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div id="page-settings" class="page">
+  <div class="page-title">Nastavení</div>
+
+  <div class="card">
+    <div class="card-title">Název aplikace</div>
+    <div class="form-group">
+      <label class="form-label">Název (zobrazí se v hlavičce)</label>
+      <input class="input" id="set-app-name" placeholder="Hokejbal">
+    </div>
+    <button class="btn btn-primary" onclick="saveAppSettings()">Uložit název</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Logo aplikace</div>
+    <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;">
+      <div>
+        <div class="settings-label">Náhled</div>
+        <div class="logo-preview" id="logo-preview">
+          <img id="logo-preview-img" src="" alt="logo náhled" style="max-width:100%;max-height:100%;object-fit:contain;">
+        </div>
+        <div style="display:flex;gap:8px;">
+          <label class="btn btn-secondary btn-sm" style="cursor:pointer;">
+            🖼️ Nahrát logo z galerie
+            <input type="file" id="logo-file-input" accept="image/*" style="display:none;" onchange="handleLogoUpload(event)">
+          </label>
+          <button class="btn btn-ghost btn-sm" onclick="resetLogo()">↩ Výchozí</button>
+        </div>
+      </div>
+      <div style="flex:1;min-width:200px;">
+        <div class="settings-label">Přizpůsobení</div>
+        <div class="slider-row">
+          <label>Velikost</label>
+          <input type="range" id="set-logo-size" min="24" max="100" value="48" oninput="updateLogoLive()">
+          <span id="set-logo-size-val">48px</span>
+        </div>
+        <div class="slider-row">
+          <label>Posun X</label>
+          <input type="range" id="set-logo-ox" min="-30" max="30" value="0" oninput="updateLogoLive()">
+          <span id="set-logo-ox-val">0px</span>
+        </div>
+        <div class="slider-row">
+          <label>Posun Y</label>
+          <input type="range" id="set-logo-oy" min="-20" max="20" value="0" oninput="updateLogoLive()">
+          <span id="set-logo-oy-val">0px</span>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px;">
+          <button class="btn btn-primary btn-sm" onclick="saveLogoSettings()">Uložit logo</button>
+          <button class="btn btn-ghost btn-sm" onclick="centerLogo()">Vystředit</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">💾 Export a Import dat</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Záloha dat pro případ ztráty nebo přesunu na jiné zařízení. Exportovaný soubor obsahuje hráče, sezóny, zápasy a finance.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="exportData()">📥 Exportovat data (JSON)</button>
+      <label class="btn btn-secondary" style="cursor:pointer;">
+        📤 Importovat data
+        <input type="file" id="import-file-input" accept=".json" style="display:none;" onchange="importData(event)">
+      </label>
+    </div>
+    <div id="import-status" style="margin-top:10px;font-size:13px;"></div>
+  </div>
+
+</div>
+
+</main>
+
+<!-- MODAL: ADD MATCH -->
+<div id="modal-add-match" class="overlay" style="display:none;" onclick="if(event.target===this)closeModal('modal-add-match')">
+  <div class="modal">
+    <div class="modal-title">Přidat zápas</div>
+    <div class="form-group">
+      <label class="form-label">Soupeř</label>
+      <input class="input" id="match-team" placeholder="Název týmu" onkeydown="if(event.key==='Enter')saveMatch()">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Přítomnost hráčů &nbsp;<span style="color:var(--muted);font-size:11px;font-weight:400;text-transform:none;letter-spacing:0;">
+        <span style="background:var(--green);color:#fff;border-radius:3px;padding:1px 5px;font-size:10px;">✓ byl</span>
+        <span style="background:var(--red);color:#fff;border-radius:3px;padding:1px 5px;font-size:10px;margin-left:4px;">✕ nebyl</span>
+      </span></label>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <button class="btn btn-green btn-sm" onclick="selectAllPresent()">Označit všechny</button>
+        <button class="btn btn-ghost btn-sm" onclick="clearPresence()">Vymazat vše</button>
+      </div>
+      <div class="pclist" id="match-players-list"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-match')">Zrušit</button>
+      <button class="btn btn-primary" onclick="saveMatch()">Uložit zápas</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD PLAYER -->
+<div id="modal-add-player" class="overlay" style="display:none;" onclick="if(event.target===this)closeModal('modal-add-player')">
+  <div class="modal">
+    <div class="modal-title">Přidat hráče</div>
+    <div class="form-group">
+      <label class="form-label">Jméno</label>
+      <input class="input" id="new-player-name" placeholder="Příjmení Jméno">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">🤍 Číslo (bílý dres)</label>
+        <input class="input" type="number" id="new-player-nw" placeholder="—">
+      </div>
+      <div class="form-group">
+        <label class="form-label">💚 Číslo (zelený dres)</label>
+        <input class="input" type="number" id="new-player-ng" placeholder="—">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Velikost dresu</label>
+        <select class="input" id="new-player-size">
+          <option value="">—</option>
+          <option value="XS">XS</option>
+          <option value="S">S</option>
+          <option value="M">M</option>
+          <option value="L">L</option>
+          <option value="XL">XL</option>
+          <option value="2XL">2XL</option>
+          <option value="3XL">3XL</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Post</label>
+        <select class="input" id="new-player-pos">
+          <option value="">—</option>
+          <option value="Útočník">⚔️ Útočník</option>
+          <option value="Obránce">🛡️ Obránce</option>
+          <option value="Brankář">🥅 Brankář</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-player')">Zrušit</button>
+      <button class="btn btn-primary" onclick="addPlayer()">Přidat</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: EDIT PLAYER -->
+<div id="modal-edit-player" class="overlay" style="display:none;" onclick="if(event.target===this)closeModal('modal-edit-player')">
+  <div class="modal">
+    <div class="modal-title">Upravit hráče</div>
+    <input type="hidden" id="edit-player-id">
+    <div class="form-group">
+      <label class="form-label">Jméno</label>
+      <input class="input" id="edit-player-name">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">🤍 Číslo (bílý dres)</label>
+        <input class="input" type="number" id="edit-player-nw" placeholder="—">
+      </div>
+      <div class="form-group">
+        <label class="form-label">💚 Číslo (zelený dres)</label>
+        <input class="input" type="number" id="edit-player-ng" placeholder="—">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Velikost dresu</label>
+        <select class="input" id="edit-player-size">
+          <option value="">—</option>
+          <option value="XS">XS</option>
+          <option value="S">S</option>
+          <option value="M">M</option>
+          <option value="L">L</option>
+          <option value="XL">XL</option>
+          <option value="2XL">2XL</option>
+          <option value="3XL">3XL</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Post</label>
+        <select class="input" id="edit-player-pos">
+          <option value="">—</option>
+          <option value="Útočník">⚔️ Útočník</option>
+          <option value="Obránce">🛡️ Obránce</option>
+          <option value="Brankář">🥅 Brankář</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-player')">Zrušit</button>
+      <button class="btn btn-primary" onclick="saveEditPlayer()">Uložit</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD SEASON -->
+<div id="modal-add-season" class="overlay" style="display:none;" onclick="if(event.target===this)closeModal('modal-add-season')">
+  <div class="modal">
+    <div class="modal-title">Nová sezóna</div>
+    <div class="form-group">
+      <label class="form-label">Název (např. Sezóna 26/27)</label>
+      <input class="input" id="new-season-name" placeholder="Sezóna 26/27" onkeydown="if(event.key==='Enter')addSeason()">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-season')">Zrušit</button>
+      <button class="btn btn-primary" onclick="addSeason()">Vytvořit</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: SEASON PAID SUMMARY -->
+<div id="modal-season-paid" class="overlay" style="display:none;" onclick="if(event.target===this)closeModal('modal-season-paid')">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title">Zaplaceno v sezóně</div>
+    <div style="color:var(--muted);font-size:13px;margin-bottom:20px;" id="season-paid-sub"></div>
+    <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:120px;background:var(--green-bg);border-radius:10px;padding:16px 18px;text-align:center;">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--green2);margin-bottom:6px;">Celkem zaplaceno</div>
+        <div id="season-paid-total" style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;color:var(--green2);"></div>
+      </div>
+      <div style="flex:1;min-width:120px;background:var(--red-bg);border-radius:10px;padding:16px 18px;text-align:center;">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--red2);margin-bottom:6px;">Celkem zbývá</div>
+        <div id="season-paid-remaining" style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;color:var(--red2);"></div>
+      </div>
+    </div>
+    <div style="background:var(--surface2);border-radius:8px;overflow:hidden;border:1px solid var(--border);">
+      <div id="season-paid-list" style="max-height:320px;overflow-y:auto;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-season-paid')">Zavřít</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD FEE -->
+<div id="modal-add-fee" class="overlay" style="display:none;" onclick="if(event.target===this)closeModal('modal-add-fee')">
+  <div class="modal">
+    <div class="modal-title">Přidat poplatek</div>
+    <div style="color:var(--muted);font-size:13px;margin-bottom:16px;" id="fee-modal-sub"></div>
+    <input type="hidden" id="fee-player-id">
+    <input type="hidden" id="fee-season-id">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Celková částka (Kč)</label>
+        <input class="input" type="number" id="fee-amount">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Již zaplaceno (Kč)</label>
+        <input class="input" type="number" id="fee-paid-init" placeholder="0">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-fee')">Zrušit</button>
+      <button class="btn btn-primary" onclick="saveFee()">Uložit</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: PAY FEE -->
+<div id="modal-pay-fee" class="overlay" style="display:none;" onclick="if(event.target===this)closeModal('modal-pay-fee')">
+  <div class="modal">
+    <div class="modal-title">Zaplatit poplatek</div>
+    <div style="color:var(--muted);font-size:13px;margin-bottom:6px;" id="pay-modal-sub"></div>
+    <div style="margin-bottom:16px;" id="pay-modal-info"></div>
+    <input type="hidden" id="pay-player-id">
+    <input type="hidden" id="pay-season-id">
+    <div class="form-group">
+      <label class="form-label">Zaplatit částku (Kč)</label>
+      <input class="input" type="number" id="pay-amount" onkeydown="if(event.key==='Enter')savePayment()">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-pay-fee')">Zrušit</button>
+      <button class="btn btn-gold" onclick="savePayment()">Zaplatit</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: MATCH DETAIL -->
+<div id="modal-match-detail" class="overlay" style="display:none;" onclick="if(event.target===this)closeModal('modal-match-detail')">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title" id="match-detail-title"></div>
+    <div id="match-detail-counts" style="margin-bottom:8px;font-size:14px;"></div>
+    <div id="match-detail-body" style="max-height:60vh;overflow-y:auto;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeModal('modal-match-detail')">Zavřít</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD PLAYER TO SEASON -->
+<div id="modal-season-add-player" class="overlay" style="display:none;" onclick="if(event.target===this)closeModal('modal-season-add-player')">
+  <div class="modal">
+    <div class="modal-title">Přidat hráče do sezóny</div>
+    <div style="color:var(--muted);font-size:13px;margin-bottom:14px;">Nový hráč se přidá i do hlavního seznamu hráčů.</div>
+    <div class="form-group">
+      <label class="form-label">Jméno</label>
+      <input class="input" id="sap-name" placeholder="Příjmení Jméno">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">🤍 Číslo (bílý)</label>
+        <input class="input" type="number" id="sap-nw" placeholder="—">
+      </div>
+      <div class="form-group">
+        <label class="form-label">💚 Číslo (zelený)</label>
+        <input class="input" type="number" id="sap-ng" placeholder="—">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Velikost dresu</label>
+        <select class="input" id="sap-size">
+          <option value="">—</option>
+          <option value="XS">XS</option><option value="S">S</option><option value="M">M</option>
+          <option value="L">L</option><option value="XL">XL</option>
+          <option value="2XL">2XL</option><option value="3XL">3XL</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Post</label>
+        <select class="input" id="sap-pos">
+          <option value="">—</option>
+          <option value="Útočník">⚔️ Útočník</option>
+          <option value="Obránce">🛡️ Obránce</option>
+          <option value="Brankář">🥅 Brankář</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-season-add-player')">Zrušit</button>
+      <button class="btn btn-primary" onclick="addPlayerToSeason()">Přidat hráče</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: BULK FEE -->
+<div id="modal-bulk-fee" class="overlay" style="display:none;" onclick="if(event.target===this)closeModal('modal-bulk-fee')">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-title">Hromadný poplatek</div>
+    <div style="color:var(--muted);font-size:13px;margin-bottom:16px;" id="bulk-fee-sub"></div>
+    <div class="form-row" style="margin-bottom:16px;">
+      <div class="form-group" style="max-width:260px;">
+        <label class="form-label">Výše poplatku (Kč)</label>
+        <input class="input" type="number" id="bulk-fee-amount" placeholder="3000">
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <label class="form-label" style="margin:0;">Vybrat hráče</label>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-ghost btn-sm" onclick="bulkSelectAll()">Všichni</button>
+        <button class="btn btn-ghost btn-sm" onclick="bulkSelectNone()">Žádný</button>
+      </div>
+    </div>
+    <div class="pclist" id="bulk-player-list" style="max-height:280px;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-bulk-fee')">Zrušit</button>
+      <button class="btn btn-primary" onclick="saveBulkFee()">Nastavit poplatek</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD/EDIT ITEM -->
+<div id="modal-item" class="overlay" style="display:none;" onclick="if(event.target===this)closeModal('modal-item')">
+  <div class="modal">
+    <div class="modal-title" id="item-modal-title">Přidat položku</div>
+    <div style="color:var(--muted);font-size:13px;margin-bottom:16px;" id="item-modal-sub"></div>
+    <input type="hidden" id="item-player-id">
+    <input type="hidden" id="item-season-id">
+    <input type="hidden" id="item-id">
+    <div class="form-group">
+      <label class="form-label">Název položky</label>
+      <input class="input" id="item-name-input" placeholder="např. Štulpny, Dres, Výstroj...">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Celková částka (Kč)</label>
+        <input class="input" type="number" id="item-amount" placeholder="0" oninput="updateItemRemaining()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Zaplaceno (Kč)</label>
+        <input class="input" type="number" id="item-paid" placeholder="0" oninput="updateItemRemaining()">
+      </div>
+    </div>
+    <div style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:4px;font-size:13px;color:var(--muted);">
+      💡 Zbývá doplatit: <strong id="item-remaining" style="color:var(--dark);">—</strong>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" id="item-delete-btn" style="margin-right:auto;display:none;" onclick="deleteItem()">🗑 Smazat</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-item')">Zrušit</button>
+      <button class="btn btn-primary" onclick="saveItem()">Uložit</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: EDIT FEE -->
+<div id="modal-edit-fee" class="overlay" style="display:none;" onclick="if(event.target===this)closeModal('modal-edit-fee')">
+  <div class="modal">
+    <div class="modal-title">Upravit poplatek</div>
+    <div style="color:var(--muted);font-size:13px;margin-bottom:16px;" id="edit-fee-sub"></div>
+    <input type="hidden" id="edit-fee-player-id">
+    <input type="hidden" id="edit-fee-season-id">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Celková částka k zaplacení (Kč)</label>
+        <input class="input" type="number" id="edit-fee-amount" placeholder="3000" oninput="updateEditFeeRemaining()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Již zaplaceno (Kč)</label>
+        <input class="input" type="number" id="edit-fee-paid" placeholder="0" oninput="updateEditFeeRemaining()">
+      </div>
+    </div>
+    <div style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:4px;font-size:13px;color:var(--muted);">
+      💡 Zbývá doplatit: <strong id="edit-fee-remaining" style="color:var(--dark);">—</strong>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" onclick="deleteFee()" style="margin-right:auto;">🗑 Smazat poplatek</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-fee')">Zrušit</button>
+      <button class="btn btn-primary" onclick="saveEditFee()">Uložit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== DEFAULT LOGO ====================
+const DEFAULT_LOGO = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#0f1a10" stroke="#e63946" stroke-width="4"/><text x="50" y="38" font-family="Arial Black,sans-serif" font-size="28" font-weight="900" fill="#e63946" text-anchor="middle" dominant-baseline="middle">HB</text><text x="50" y="65" font-family="Arial,sans-serif" font-size="11" font-weight="700" fill="#2d9e5f" text-anchor="middle" dominant-baseline="middle" letter-spacing="1">NFC SPARTA</text></svg>`);
+
+// ==================== PWA MANIFEST ====================
+function injectPWAManifest(iconSrc) {
+  const icon = iconSrc || DEFAULT_LOGO;
+  // Apple touch icon
+  document.getElementById('apple-touch-icon').href = icon;
+  // Web app manifest as Blob URL
+  const manifest = {
+    name: 'Hokejbal',
+    short_name: 'Hokejbal',
+    start_url: './',
+    display: 'standalone',
+    background_color: '#0f1a10',
+    theme_color: '#0f1a10',
+    icons: [
+      { src: icon, sizes: '192x192', type: 'image/svg+xml' },
+      { src: icon, sizes: '512x512', type: 'image/svg+xml' }
+    ]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], {type: 'application/manifest+json'});
+  const url = URL.createObjectURL(blob);
+  const el = document.getElementById('pwa-manifest');
+  if (el._prevUrl) URL.revokeObjectURL(el._prevUrl);
+  el._prevUrl = url;
+  el.href = url;
+}
+
+// ==================== DEFAULT DATA ====================
+const DEFAULT_DATA = {"players": [], "seasons": [], "seasonData": {}, "appName": "Hokejbal", "logoSize": 48, "logoOffsetX": 0, "logoOffsetY": 0};
+
+// ==================== STATE ====================
+let state;
+let currentPage = 'home';
+let currentSeasonId = null;
+let currentPlayerId = null;
+let playerBackPage = 'players';
+let matchPresence = {};
+let appSettings = {name:'Hokejbal', sub:'NFC Sparta Kladno', logoSize:48, logoOffsetX:0, logoOffsetY:0, logoSrc: DEFAULT_LOGO};
+
+// ==================== STORAGE ====================
+function saveState() {
+  try { localStorage.setItem('hokejbal_v2', JSON.stringify(state)); } catch(e) {}
+}
+function saveSettings() {
+  try {
+    const s = {...appSettings};
+    // Don't store full logo in settings key if same as default - save space
+    localStorage.setItem('hokejbal_settings_v2', JSON.stringify(s));
+  } catch(e) {}
+}
+function loadAll() {
+  try {
+    const s = localStorage.getItem('hokejbal_v2');
+    if (s) state = JSON.parse(s);
+    else state = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  } catch(e) { state = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
+  try {
+    const cfg = localStorage.getItem('hokejbal_settings_v2');
+    if (cfg) appSettings = {...appSettings, ...JSON.parse(cfg)};
+  } catch(e) {}
+}
+
+// ==================== UTILS ====================
+function uid() { return Math.random().toString(36).slice(2)+Date.now().toString(36); }
+function findPlayer(id) { return state.players.find(p=>p.id===id); }
+function findSeason(id) { return state.seasons.find(s=>s.id===id); }
+function getSD(sid) { return state.seasonData[sid] || {matches:[],fees:[]}; }
+function getMatches(sid) { return getSD(sid).matches || []; }
+function getFees(sid) { return getSD(sid).fees || []; }
+function getFee(pid,sid) { return getFees(sid).find(f=>f.playerId===pid)||null; }
+function getPresent(pid,sid) { return getMatches(sid).filter(m=>(m.playerIds||[]).includes(pid)); }
+function getAbsent(pid,sid) { return getMatches(sid).filter(m=>(m.absentIds||[]).includes(pid)); }
+
+// ==================== NAV ====================
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  const navMap = {home:0, players:1, settings:2};
+  if (navMap[page]!==undefined) document.querySelectorAll('.nav-btn')[navMap[page]].classList.add('active');
+  currentPage = page;
+  if (page==='home') renderHome();
+  if (page==='players') renderPlayersTable();
+  if (page==='season') renderSeasonPage();
+  if (page==='player') renderPlayerPage();
+  if (page==='settings') initSettings();
+}
+function openModal(id) { document.getElementById(id).style.display='flex'; }
+function closeModal(id) { document.getElementById(id).style.display='none'; }
+
+// ==================== HEADER ====================
+function applySettings() {
+  const s = appSettings;
+  // Name
+  document.getElementById('header-name').textContent = s.name;
+  document.getElementById('header-sub').textContent = s.sub || 'NFC Sparta Kladno';
+  document.title = s.name || 'Hokejbal';
+  // Logo
+  const img = document.getElementById('header-logo');
+  img.src = s.logoSrc || DEFAULT_LOGO;
+  img.style.width = s.logoSize+'px';
+  img.style.height = s.logoSize+'px';
+  img.style.transform = `translate(${s.logoOffsetX}px,${s.logoOffsetY}px)`;
+}
+
+// ==================== HOME ====================
+function renderHome() {
+  const grid = document.getElementById('season-grid');
+  let html = '';
+  state.seasons.forEach(s => {
+    const cnt = getMatches(s.id).length;
+    html += `<div class="scard">
+      <button class="scard-del" onclick="event.stopPropagation();deleteSeason('${s.id}')" title="Smazat sezónu">✕</button>
+      <div onclick="openSeason('${s.id}')" style="cursor:pointer;">
+        <div class="scard-name">${s.name}</div>
+        <div class="scard-sub">${cnt} zápasů</div>
+      </div>
+    </div>`;
+  });
+  html += `<div class="scard scard-add" onclick="openModal('modal-add-season')">
+    <div class="scard-name">+ Nová sezóna</div>
+    <div class="scard-sub">přidat sezónu</div>
+  </div>`;
+  grid.innerHTML = html;
+}
+
+function openSeason(sid) { currentSeasonId=sid; showPage('season'); }
+
+function addSeason() {
+  const name = document.getElementById('new-season-name').value.trim();
+  if (!name) return;
+  state.seasons.push({id:uid(), name});
+  saveState(); closeModal('modal-add-season');
+  document.getElementById('new-season-name').value='';
+  renderHome();
+}
+
+function deleteSeason(sid) {
+  const s = findSeason(sid);
+  if (!confirm(`Smazat sezónu "${s.name}"?\n\nTato akce smaže i všechny zápasy a platby v této sezóně.`)) return;
+  state.seasons = state.seasons.filter(s=>s.id!==sid);
+  delete state.seasonData[sid];
+  saveState();
+  renderHome();
+}
+
+// ==================== PLAYERS ====================
+function renderPlayersTable() {
+  const filter = (document.getElementById('player-filter')||{}).value||'';
+  const sort = (document.getElementById('player-sort')||{}).value||'name';
+  let players = state.players.filter(p=>p.name.toLowerCase().includes(filter.toLowerCase()));
+  players.sort((a,b) => sort==='name' ? a.name.localeCompare(b.name) : (a.number||0)-(b.number||0));
+  document.getElementById('players-tbody').innerHTML = players.map(p=>`
+    <tr class="clk" onclick="openPlayer('${p.id}','players')">
+      <td style="color:var(--dark);font-weight:600;">${p.name}</td>
+      <td>${p.numberWhite!=null?'#'+p.numberWhite:(p.number!=null?'#'+p.number:'—')}${p.numberGreen!=null&&p.numberGreen!==p.numberWhite?`<span style="color:var(--green);font-size:11px;"> / #${p.numberGreen}</span>`:''}</td>
+      <td><span style="font-size:12px;color:var(--muted);">${p.size||'—'}</span></td>
+      <td><span style="font-size:12px;">${p.pos||'—'}</span></td>
+      <td onclick="event.stopPropagation()" style="text-align:right;">
+        <button class="btn btn-ghost btn-sm" onclick="openEditPlayer('${p.id}')">✏️</button>
+        <button class="btn btn-danger btn-sm" style="margin-left:5px;" onclick="deletePlayer('${p.id}')">🗑</button>
+      </td>
+    </tr>`).join('');
+}
+
+function addPlayer() {
+  const name = document.getElementById('new-player-name').value.trim();
+  if (!name) return;
+  const nw = document.getElementById('new-player-nw').value;
+  const ng = document.getElementById('new-player-ng').value;
+  const size = document.getElementById('new-player-size').value;
+  const pos = document.getElementById('new-player-pos').value;
+  // Use white number as primary if only one set, else store both
+  const numW = nw ? Number(nw) : null;
+  const numG = ng ? Number(ng) : null;
+  const number = numW ?? numG;
+  state.players.push({id:uid(), name, number, numberWhite:numW, numberGreen:numG, size, pos});
+  saveState(); closeModal('modal-add-player');
+  ['new-player-name','new-player-nw','new-player-ng'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('new-player-size').value='';
+  document.getElementById('new-player-pos').value='';
+  renderPlayersTable();
+}
+
+function deletePlayer(id) {
+  const p = findPlayer(id);
+  if (!confirm(`Smazat hráče "${p.name}"?`)) return;
+  state.players = state.players.filter(p=>p.id!==id);
+  saveState(); renderPlayersTable();
+}
+
+function openEditPlayer(pid) {
+  const p = findPlayer(pid);
+  document.getElementById('edit-player-id').value=pid;
+  document.getElementById('edit-player-name').value=p.name;
+  document.getElementById('edit-player-nw').value=p.numberWhite??p.number??'';
+  document.getElementById('edit-player-ng').value=p.numberGreen??'';
+  document.getElementById('edit-player-size').value=p.size||'';
+  document.getElementById('edit-player-pos').value=p.pos||'';
+  openModal('modal-edit-player');
+}
+
+function saveEditPlayer() {
+  const pid=document.getElementById('edit-player-id').value;
+  const nw=document.getElementById('edit-player-nw').value;
+  const ng=document.getElementById('edit-player-ng').value;
+  const size=document.getElementById('edit-player-size').value;
+  const pos=document.getElementById('edit-player-pos').value;
+  const numW=nw?Number(nw):null;
+  const numG=ng?Number(ng):null;
+  state.players=state.players.map(p=>p.id!==pid?p:{...p,
+    name:document.getElementById('edit-player-name').value,
+    number:numW??numG??null,
+    numberWhite:numW, numberGreen:numG,
+    size, pos
+  });
+  saveState(); closeModal('modal-edit-player');
+  if(currentPage==='players') renderPlayersTable();
+  if(currentPage==='player') renderPlayerPage();
+  if(currentPage==='season') renderSeasonTable();
+}
+
+function openPlayer(pid, back) {
+  currentPlayerId=pid; playerBackPage=back;
+  document.getElementById('player-back-btn').onclick=()=>showPage(back);
+  showPage('player');
+}
+
+// ==================== SEASON DETAIL ====================
+function renderSeasonPage() {
+  const season = findSeason(currentSeasonId);
+  if (!season) return;
+  document.getElementById('season-detail-title').textContent = season.name;
+  const matches = getMatches(currentSeasonId);
+  const ml = document.getElementById('matches-list');
+  if (matches.length===0) { ml.innerHTML='<span style="color:var(--muted);font-size:14px;">Zatím žádné zápasy</span>'; }
+  else ml.innerHTML = matches.map(m=>`
+    <div style="display:inline-flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 12px;cursor:pointer;" onclick="showMatchDetail('${m.id}')">
+      <span style="font-weight:600;color:var(--dark);">${m.team}</span>
+      <span style="color:var(--green);font-size:12px;">✓ ${(m.playerIds||[]).length}</span>
+      <span style="color:var(--red);font-size:12px;">✗ ${(m.absentIds||[]).length}</span>
+      <button class="btn btn-danger btn-sm" style="padding:2px 6px;" onclick="event.stopPropagation();deleteMatch('${m.id}')">✕</button>
+    </div>`).join('');
+  renderSeasonTable();
+}
+
+function showMatchDetail(mid) {
+  const matches = getMatches(currentSeasonId);
+  const m = matches.find(x=>x.id===mid);
+  if (!m) return;
+  const presentIds = m.playerIds||[];
+  const absentIds = m.absentIds||[];
+  const allIds = [...new Set([...presentIds,...absentIds,...state.players.map(p=>p.id)])];
+  const present = presentIds.map(id=>findPlayer(id)).filter(Boolean);
+  const absent = absentIds.map(id=>findPlayer(id)).filter(Boolean);
+  const neutral = state.players.filter(p=>!presentIds.includes(p.id)&&!absentIds.includes(p.id));
+
+  document.getElementById('match-detail-title').textContent = `vs. ${m.team}`;
+  document.getElementById('match-detail-counts').innerHTML =
+    `<span style="color:var(--green);font-weight:700;">✓ ${present.length} přítomných</span>
+     <span style="color:var(--red);font-weight:700;margin-left:12px;">✗ ${absent.length} chybí</span>`;
+
+  const row = (p, type) => {
+    const col = type==='p'?'var(--green-bg)':type==='a'?'var(--red-bg)':'var(--surface2)';
+    const border = type==='p'?'#b8e8d0':type==='a'?'#f5c2c6':'var(--border)';
+    const icon = type==='p'?'✓':type==='a'?'✗':'·';
+    const icol = type==='p'?'var(--green2)':type==='a'?'var(--red2)':'var(--muted)';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;background:${col};border:1px solid ${border};margin-bottom:4px;">
+      <span style="font-size:14px;font-weight:700;color:${icol};width:14px;text-align:center;">${icon}</span>
+      <span style="flex:1;font-size:14px;font-weight:600;">${p.name}</span>
+      <span style="font-size:12px;color:var(--muted);">${p.number!=null?'#'+p.number:''}</span>
+    </div>`;
+  };
+
+  let html = '';
+  if(present.length) html += `<div style="font-size:11px;font-weight:700;color:var(--green2);text-transform:uppercase;letter-spacing:1px;margin:10px 0 5px;">Přítomni (${present.length})</div>`+present.sort((a,b)=>a.name.localeCompare(b.name)).map(p=>row(p,'p')).join('');
+  if(absent.length) html += `<div style="font-size:11px;font-weight:700;color:var(--red2);text-transform:uppercase;letter-spacing:1px;margin:10px 0 5px;">Chybí (${absent.length})</div>`+absent.sort((a,b)=>a.name.localeCompare(b.name)).map(p=>row(p,'a')).join('');
+  if(neutral.length) html += `<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:10px 0 5px;">Bez záznamu (${neutral.length})</div>`+neutral.sort((a,b)=>a.name.localeCompare(b.name)).map(p=>row(p,'n')).join('');
+  document.getElementById('match-detail-body').innerHTML = html;
+  openModal('modal-match-detail');
+}
+
+function renderSeasonTable() {
+  const filter = document.getElementById('sd-filter').value.toLowerCase();
+  const sort = document.getElementById('sd-sort').value;
+  const paidF = document.getElementById('sd-paid').value;
+  const matches = getMatches(currentSeasonId);
+
+  let rows = state.players
+    .filter(p=>p.name.toLowerCase().includes(filter))
+    .map(p=>{
+      const pr=getPresent(p.id,currentSeasonId);
+      const fee=getFee(p.id,currentSeasonId);
+      const paid = fee?fee.paid:0;
+      const amount = fee?fee.amount:0;
+      const remaining = Math.max(0, amount - paid);
+      return {p, games:pr.length, fee,
+        paid, amount, remaining,
+        isPaid:fee&&fee.paid>=fee.amount};
+    })
+    .filter(r=>{
+      if(paidF==='paid') return r.isPaid;
+      if(paidF==='unpaid') return !r.isPaid&&r.amount>0;
+      return true;
+    });
+
+  rows.sort((a,b)=>{
+    if(sort==='name') return a.p.name.localeCompare(b.p.name);
+    if(sort==='games') return b.games-a.games;
+    if(sort==='number') return (a.p.number||0)-(b.p.number||0);
+    if(sort==='paid') return b.paid-a.paid;
+    if(sort==='debt') return b.remaining-a.remaining;
+    return 0;
+  });
+
+  const rankColors=['#f4b942','#a0a0a0','#cd7f32'];
+  document.getElementById('season-tbody').innerHTML = rows.map((r,i)=>{
+    const pct = r.amount ? Math.min(100,(r.paid/r.amount)*100) : 0;
+    const rankStyle = i<3 ? `color:${rankColors[i]};font-weight:800;` : 'color:var(--muted);';
+    const feeHtml = r.amount>0
+      ? `<div style="font-size:13px;">${r.paid}&thinsp;/&thinsp;${r.amount} Kč</div>
+         <div class="fee-bar"><div class="fee-fill" style="width:${pct}%"></div></div>`
+      : `<span style="color:var(--muted)">—</span>`;
+    const stateHtml = r.fee
+      ? (r.isPaid ? `<span class="badge badge-green">✓ OK</span>`
+          : `<button class="btn btn-gold btn-sm" onclick="openPayFee('${r.p.id}','${currentSeasonId}')">Zaplatit</button>`)
+      : `<button class="btn btn-secondary btn-sm" onclick="openAddFee('${r.p.id}','${currentSeasonId}')">+ Poplatek</button>`;
+    const debtEmoji = r.amount > 0
+      ? (r.isPaid ? '🫡' : r.remaining > r.amount / 2 ? '😡' : '😕')
+      : '';
+    const debtLabel = r.amount > 0 && !r.isPaid
+      ? `<span style="color:var(--red);font-size:12px;font-weight:700;margin-left:6px;">−${r.remaining.toLocaleString('cs')} Kč</span>`
+      : '';
+    return `<tr class="clk" onclick="openPlayer('${r.p.id}','season')">
+      <td style="${rankStyle}">${i+1}</td>
+      <td style="font-weight:600;color:var(--dark);">${debtEmoji ? `<span style="margin-right:4px;">${debtEmoji}</span>` : ''}${r.p.name}${debtLabel}</td>
+      <td>${r.p.number!=null?'#'+r.p.number:'—'}</td>
+      <td><span style="color:var(--red);font-weight:700;">${r.games}</span><span style="color:var(--muted);font-size:12px;">/${matches.length}</span></td>
+      <td>${feeHtml}</td>
+      <td onclick="event.stopPropagation()">${stateHtml}</td>
+      <td></td>
+    </tr>`;
+  }).join('');
+}
+
+function deleteMatch(mid) {
+  if (!confirm('Smazat tento zápas?')) return;
+  const sd=getSD(currentSeasonId);
+  sd.matches=sd.matches.filter(m=>m.id!==mid);
+  state.seasonData[currentSeasonId]=sd;
+  saveState(); renderSeasonPage();
+}
+
+// ==================== PLAYER DETAIL ====================
+function renderPlayerPage() {
+  const p=findPlayer(currentPlayerId);
+  if (!p) return;
+  document.getElementById('player-avatar').textContent=p.number!=null?('#'+p.number):'?';
+  document.getElementById('player-detail-name').textContent=p.name;
+  const nwTxt = p.numberWhite!=null?`🤍 #${p.numberWhite}`:(p.number!=null?`#${p.number}`:'');
+  const ngTxt = p.numberGreen!=null?`💚 #${p.numberGreen}`:'';
+  const sizeTxt = p.size?`📐 ${p.size}`:'';
+  var _posIco={'t':String.fromCodePoint(9876,65039),'b':String.fromCodePoint(128737,65039),'r':String.fromCodePoint(127941)};
+  const posTxt = p.pos?(_posIco[p.pos[1]]||'')+' '+p.pos:'';
+  const subParts=[nwTxt,ngTxt,sizeTxt,posTxt].filter(Boolean);
+  document.getElementById('player-detail-sub').textContent=subParts.join('  ·  ')||'Bez informací';
+  document.getElementById('player-edit-btn').onclick=()=>openEditPlayer(p.id);
+
+  let html='';
+  state.seasons.forEach(season=>{
+    const matches=getMatches(season.id);
+    const present=getPresent(p.id,season.id);
+    const absent=getAbsent(p.id,season.id);
+    const fee=getFee(p.id,season.id);
+    const items=getPlayerItems(p.id,season.id);
+    // Show season card always — even empty, hráč může mít jen položky
+    // Skip only seasons that have nothing at all AND no matches
+    if(matches.length===0&&!fee&&items.length===0) return;
+
+    // === Poplatek za sezónu ===
+    const pct=fee&&fee.amount?Math.min(100,(fee.paid/fee.amount)*100):0;
+    const remaining=fee?(fee.amount-fee.paid):0;
+    const feeBlock=fee
+      ? `<div style="background:var(--surface2);border-radius:8px;padding:11px 13px;margin-bottom:6px;border:1px solid var(--border);">
+           <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+             <div style="flex:1;min-width:0;">
+               <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:3px;">Poplatek za sezónu</div>
+               <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+                 <span style="font-size:17px;font-weight:800;font-family:'Barlow Condensed',sans-serif;color:var(--dark);">${fee.paid} Kč</span>
+                 <span style="font-size:12px;color:var(--muted);">/ ${fee.amount} Kč</span>
+                 ${fee.paid>=fee.amount
+                   ? `<span class="badge badge-green" style="font-size:10px;">✓ Splaceno</span>`
+                   : `<span class="badge badge-red" style="font-size:10px;">zbývá ${remaining} Kč</span>`}
+               </div>
+               <div class="fee-bar" style="margin-top:5px;height:5px;"><div class="fee-fill" style="width:${pct}%"></div></div>
+             </div>
+             <div style="display:flex;gap:5px;flex-shrink:0;">
+               ${fee.paid<fee.amount ? `<button class="btn btn-gold btn-sm" onclick="openPayFee('${p.id}','${season.id}')" style="font-size:11px;">+ Zaplatit</button>` : ''}
+               <button class="btn btn-ghost btn-sm" onclick="openEditFee('${p.id}','${season.id}')" style="font-size:11px;" title="Upravit">✏️</button>
+             </div>
+           </div>
+         </div>`
+      : `<button class="btn btn-secondary btn-sm" style="margin-bottom:6px;" onclick="openAddFee('${p.id}','${season.id}')">+ Poplatek za sezónu</button>`;
+
+    // === Položky ===
+    const itemRows = items.map(item=>{
+      const ipct=item.amount?Math.min(100,(item.paid/item.amount)*100):0;
+      const irem=item.amount-item.paid;
+      const iDone=item.paid>=item.amount;
+      return `<div style="background:var(--surface2);border-radius:8px;padding:10px 12px;margin-bottom:5px;border:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;flex-wrap:wrap;">
+            <span style="font-size:14px;font-weight:700;color:var(--dark);">${item.name}</span>
+            ${iDone
+              ? `<span class="badge badge-green" style="font-size:10px;">✓ Splaceno</span>`
+              : `<span class="badge" style="background:#fff3dc;color:#7a5c1a;font-size:10px;">zbývá ${irem} Kč</span>`}
+          </div>
+          <div style="display:flex;align-items:baseline;gap:5px;">
+            <span style="font-size:15px;font-weight:800;font-family:'Barlow Condensed',sans-serif;">${item.paid} Kč</span>
+            <span style="font-size:12px;color:var(--muted);">/ ${item.amount} Kč</span>
+          </div>
+          <div class="fee-bar" style="margin-top:4px;"><div class="fee-fill" style="width:${ipct}%;background:${iDone?'var(--green)':'var(--gold)'}"></div></div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="openEditItem('${p.id}','${season.id}','${item.id}')" style="padding:4px 9px;font-size:13px;flex-shrink:0;" title="Upravit">✏️</button>
+      </div>`;
+    }).join('');
+
+    const itemsBlock=`<div>
+      ${itemRows}
+      <button class="btn btn-secondary btn-sm" style="width:100%;justify-content:center;margin-top:${items.length?'4':'0'}px;" onclick="openAddItem('${p.id}','${season.id}')">
+        + Přidat položku
+      </button>
+    </div>`;
+
+    const hasMoves=present.length>0||absent.length>0;
+    html+=`<div class="card" style="padding:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div class="card-title" style="margin:0;">${season.name}</div>
+        ${matches.length>0 ? `<span style="color:var(--red);font-family:'Barlow Condensed';font-size:20px;font-weight:800;">${present.length}/${matches.length}</span>` : ''}
+      </div>
+      ${feeBlock}
+      ${itemsBlock}
+      ${hasMoves ? `<hr class="divider" style="margin:10px 0 8px;">
+      <div>${present.map(m=>`<div class="match-pill mp-present">✓ ${m.team}</div>`).join('')}${absent.map(m=>`<div class="match-pill mp-absent">✗ ${m.team}</div>`).join('')}</div>` : ''}
+    </div>`;
+  });
+
+  // Notes section
+  const notes = (findPlayer(currentPlayerId)||{}).notes||'';
+  html += `<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div class="card-title" style="margin:0;">📝 Poznámky</div>
+    </div>
+    <textarea id="player-notes-ta" class="input" style="min-height:100px;resize:vertical;font-family:'Barlow',sans-serif;line-height:1.5;" placeholder="Sem si zapiš cokoliv — zdravotní omezení, vybavení, kontakt…" oninput="autoSaveNotes()">${notes}</textarea>
+  </div>`;
+
+  document.getElementById('player-seasons-list').innerHTML=html||'<div class="card" style="color:var(--muted);">Žádná data pro tohoto hráče.</div>';
+}
+
+// ==================== ADD MATCH ====================
+function openAddMatch() {
+  matchPresence={};
+  const sorted=[...state.players].sort((a,b)=>a.name.localeCompare(b.name));
+  document.getElementById('match-players-list').innerHTML=sorted.map(p=>`
+    <div class="pcitem" id="pc-${p.id}">
+      <div class="chkbox" id="chkp-${p.id}" onclick="togglePresence('${p.id}','present')" title="Byl"></div>
+      <div class="chkbox" id="chka-${p.id}" onclick="togglePresence('${p.id}','absent')" title="Nebyl"></div>
+      <span style="flex:1;font-size:14px;">${p.name}</span>
+      <span style="color:var(--muted);font-size:12px;">${p.number!=null?'#'+p.number:''}</span>
+    </div>`).join('');
+  openModal('modal-add-match');
+}
+
+function togglePresence(pid,status) {
+  matchPresence[pid]=matchPresence[pid]===status?undefined:status;
+  const s=matchPresence[pid];
+  document.getElementById('pc-'+pid).className='pcitem'+(s==='present'?' cp':s==='absent'?' ca':'');
+  const cp=document.getElementById('chkp-'+pid);
+  const ca=document.getElementById('chka-'+pid);
+  cp.className='chkbox'+(s==='present'?' p':''); cp.textContent=s==='present'?'✓':'';
+  ca.className='chkbox'+(s==='absent'?' a':''); ca.textContent=s==='absent'?'✕':'';
+}
+
+function selectAllPresent() {
+  state.players.forEach(p=>{ matchPresence[p.id]='present'; });
+  state.players.forEach(p=>togglePresence(p.id,'present'));
+  state.players.forEach(p=>{ if(matchPresence[p.id]!=='present'){matchPresence[p.id]='present'; togglePresence(p.id,'present');}});
+  // rebuild
+  state.players.forEach(p=>{ matchPresence[p.id]=undefined; });
+  state.players.forEach(p=>togglePresence(p.id,'present'));
+}
+
+function clearPresence() {
+  state.players.forEach(p=>{
+    matchPresence[p.id]=undefined;
+    document.getElementById('pc-'+p.id).className='pcitem';
+    document.getElementById('chkp-'+p.id).className='chkbox'; document.getElementById('chkp-'+p.id).textContent='';
+    document.getElementById('chka-'+p.id).className='chkbox'; document.getElementById('chka-'+p.id).textContent='';
+  });
+}
+
+function saveMatch() {
+  const team=document.getElementById('match-team').value.trim();
+  if (!team) return;
+  const sd=getSD(currentSeasonId);
+  if(!sd.matches) sd.matches=[];
+  sd.matches.push({id:uid(),team,
+    playerIds:state.players.filter(p=>matchPresence[p.id]==='present').map(p=>p.id),
+    absentIds:state.players.filter(p=>matchPresence[p.id]==='absent').map(p=>p.id)
+  });
+  state.seasonData[currentSeasonId]=sd;
+  saveState(); closeModal('modal-add-match');
+  document.getElementById('match-team').value='';
+  renderSeasonPage();
+}
+
+// ==================== FEES ====================
+function openAddFee(pid,sid) {
+  const p=findPlayer(pid); const s=findSeason(sid);
+  document.getElementById('fee-modal-sub').textContent=`${p.name} — ${s.name}`;
+  document.getElementById('fee-player-id').value=pid;
+  document.getElementById('fee-season-id').value=sid;
+  document.getElementById('fee-amount').value='';
+  document.getElementById('fee-paid-init').value='';
+  openModal('modal-add-fee');
+}
+function saveFee() {
+  const pid=document.getElementById('fee-player-id').value;
+  const sid=document.getElementById('fee-season-id').value;
+  const amount=Number(document.getElementById('fee-amount').value);
+  const paid=Number(document.getElementById('fee-paid-init').value||0);
+  if(!amount) return;
+  const sd=getSD(sid);
+  sd.fees=(sd.fees||[]).filter(f=>f.playerId!==pid);
+  sd.fees.push({playerId:pid,amount,paid});
+  state.seasonData[sid]=sd;
+  saveState(); closeModal('modal-add-fee');
+  if(currentPage==='season') renderSeasonPage();
+  if(currentPage==='player') renderPlayerPage();
+}
+function openPayFee(pid,sid) {
+  const p=findPlayer(pid); const s=findSeason(sid);
+  const fee=getFee(pid,sid);
+  document.getElementById('pay-modal-sub').textContent=`${p.name} — ${s.name}`;
+  document.getElementById('pay-modal-info').innerHTML=`<span style="font-weight:600;">${fee.paid}&thinsp;/&thinsp;${fee.amount} Kč</span> &nbsp;<span style="color:var(--red);">Zbývá: ${fee.amount-fee.paid} Kč</span>`;
+  document.getElementById('pay-player-id').value=pid;
+  document.getElementById('pay-season-id').value=sid;
+  document.getElementById('pay-amount').value='';
+  document.getElementById('pay-amount').placeholder=fee.amount-fee.paid;
+  openModal('modal-pay-fee');
+}
+function savePayment() {
+  const pid=document.getElementById('pay-player-id').value;
+  const sid=document.getElementById('pay-season-id').value;
+  const amount=Number(document.getElementById('pay-amount').value);
+  if(!amount) return;
+  const sd=getSD(sid);
+  sd.fees=sd.fees.map(f=>f.playerId!==pid?f:{...f,paid:Math.min(f.amount,f.paid+amount)});
+  state.seasonData[sid]=sd;
+  saveState(); closeModal('modal-pay-fee');
+  if(currentPage==='season') renderSeasonPage();
+  if(currentPage==='player') renderPlayerPage();
+}
+
+// ==================== IMPORT / EXPORT ====================
+function exportData() {
+  const exportObj = { state, appSettings: {...appSettings, logoSrc: undefined} };
+  const blob = new Blob([JSON.stringify(exportObj, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const d = new Date();
+  a.download = `hokejbal_export_${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const st = document.getElementById('import-status');
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if (!parsed.state || !parsed.state.players || !parsed.state.seasons) {
+        st.innerHTML = '<span style="color:var(--red);">❌ Neplatný soubor — chybí data.</span>';
+        return;
+      }
+      if (!confirm(`Import přepíše všechna současná data (${parsed.state.players.length} hráčů, ${parsed.state.seasons.length} sezón). Pokračovat?`)) return;
+      state = parsed.state;
+      if (parsed.appSettings) {
+        appSettings = {...appSettings, ...parsed.appSettings};
+        applySettings();
+      }
+      saveState(); saveSettings();
+      st.innerHTML = `<span style="color:var(--green2);">✓ Import úspěšný — ${state.players.length} hráčů, ${state.seasons.length} sezón načteno.</span>`;
+      initSettings();
+    } catch(err) {
+      st.innerHTML = '<span style="color:var(--red);">❌ Chyba při čtení souboru: ' + err.message + '</span>';
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// ==================== SETTINGS ====================
+function initSettings() {
+  document.getElementById('set-app-name').value=appSettings.name;
+  document.getElementById('set-logo-size').value=appSettings.logoSize;
+  document.getElementById('set-logo-size-val').textContent=appSettings.logoSize+'px';
+  document.getElementById('set-logo-ox').value=appSettings.logoOffsetX;
+  document.getElementById('set-logo-ox-val').textContent=appSettings.logoOffsetX+'px';
+  document.getElementById('set-logo-oy').value=appSettings.logoOffsetY;
+  document.getElementById('set-logo-oy-val').textContent=appSettings.logoOffsetY+'px';
+  document.getElementById('logo-preview-img').src=appSettings.logoSrc||DEFAULT_LOGO;
+}
+
+function saveAppSettings() {
+  appSettings.name=document.getElementById('set-app-name').value||'Hokejbal';
+  applySettings(); saveSettings();
+}
+
+function updateLogoLive() {
+  const size=Number(document.getElementById('set-logo-size').value);
+  const ox=Number(document.getElementById('set-logo-ox').value);
+  const oy=Number(document.getElementById('set-logo-oy').value);
+  document.getElementById('set-logo-size-val').textContent=size+'px';
+  document.getElementById('set-logo-ox-val').textContent=ox+'px';
+  document.getElementById('set-logo-oy-val').textContent=oy+'px';
+  // Live preview on header
+  const img=document.getElementById('header-logo');
+  img.style.width=size+'px'; img.style.height=size+'px';
+  img.style.transform=`translate(${ox}px,${oy}px)`;
+}
+
+function saveLogoSettings() {
+  appSettings.logoSize=Number(document.getElementById('set-logo-size').value);
+  appSettings.logoOffsetX=Number(document.getElementById('set-logo-ox').value);
+  appSettings.logoOffsetY=Number(document.getElementById('set-logo-oy').value);
+  appSettings.logoSrc=document.getElementById('logo-preview-img').src;
+  applySettings(); saveSettings();
+  injectPWAManifest(appSettings.logoSrc);
+}
+
+function centerLogo() {
+  document.getElementById('set-logo-ox').value=0;
+  document.getElementById('set-logo-oy').value=0;
+  updateLogoLive();
+}
+
+function resetLogo() {
+  document.getElementById('logo-preview-img').src=DEFAULT_LOGO;
+  document.getElementById('header-logo').src=DEFAULT_LOGO;
+  appSettings.logoSrc=DEFAULT_LOGO;
+}
+
+function handleLogoUpload(event) {
+  const file=event.target.files[0];
+  if (!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const src=e.target.result;
+    document.getElementById('logo-preview-img').src=src;
+    document.getElementById('header-logo').src=src;
+    appSettings.logoSrc=src;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ==================== SEASON ADD PLAYER ====================
+function openSeasonAddPlayer() {
+  ['sap-name','sap-nw','sap-ng'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('sap-size').value='';
+  document.getElementById('sap-pos').value='';
+  openModal('modal-season-add-player');
+}
+function addPlayerToSeason() {
+  const name=document.getElementById('sap-name').value.trim();
+  if(!name) return;
+  const nw=document.getElementById('sap-nw').value;
+  const ng=document.getElementById('sap-ng').value;
+  const size=document.getElementById('sap-size').value;
+  const pos=document.getElementById('sap-pos').value;
+  const numW=nw?Number(nw):null;
+  const numG=ng?Number(ng):null;
+  // Check if player already exists (case-insensitive name match)
+  let player=state.players.find(p=>p.name.toLowerCase()===name.toLowerCase());
+  if(!player) {
+    player={id:uid(),name,number:numW??numG??null,numberWhite:numW,numberGreen:numG,size,pos};
+    state.players.push(player);
+  }
+  saveState(); closeModal('modal-season-add-player');
+  if(currentPage==='players') renderPlayersTable();
+  renderSeasonPage();
+}
+
+// ==================== BULK FEE ====================
+let bulkSelected={};
+function openBulkFee() {
+  const season=findSeason(currentSeasonId);
+  document.getElementById('bulk-fee-sub').textContent=`Sezóna: ${season.name}`;
+  document.getElementById('bulk-fee-amount').value='';
+  // Build player checklist
+  bulkSelected={};
+  const sorted=[...state.players].sort((a,b)=>a.name.localeCompare(b.name));
+  sorted.forEach(p=>{ bulkSelected[p.id]=true; }); // select all by default
+  renderBulkList(sorted);
+  openModal('modal-bulk-fee');
+}
+function renderBulkList(players) {
+  const list=document.getElementById('bulk-player-list');
+  const sorted=players||[...state.players].sort((a,b)=>a.name.localeCompare(b.name));
+  list.innerHTML=sorted.map(p=>{
+    const sel=bulkSelected[p.id];
+    const existingFee=getFee(p.id,currentSeasonId);
+    return `<div class="pcitem ${sel?'cp':''}" id="bpk-${p.id}" onclick="toggleBulk('${p.id}')">
+      <div class="chkbox ${sel?'p':''}" id="bchk-${p.id}">${sel?'✓':''}</div>
+      <span style="flex:1;font-size:14px;">${p.name}</span>
+      <span style="font-size:11px;color:var(--muted);">${p.number!=null?'#'+p.number:''}</span>
+      ${existingFee?`<span class="badge badge-muted" style="font-size:10px;">má poplatek</span>`:''}
+    </div>`;
+  }).join('');
+}
+function toggleBulk(pid) {
+  bulkSelected[pid]=!bulkSelected[pid];
+  const el=document.getElementById('bpk-'+pid);
+  const chk=document.getElementById('bchk-'+pid);
+  el.className='pcitem'+(bulkSelected[pid]?' cp':'');
+  chk.className='chkbox'+(bulkSelected[pid]?' p':'');
+  chk.textContent=bulkSelected[pid]?'✓':'';
+}
+function bulkSelectAll() {
+  state.players.forEach(p=>{ bulkSelected[p.id]=true; });
+  renderBulkList();
+}
+function bulkSelectNone() {
+  state.players.forEach(p=>{ bulkSelected[p.id]=false; });
+  renderBulkList();
+}
+function saveBulkFee() {
+  const amount=Number(document.getElementById('bulk-fee-amount').value);
+  if(!amount) { alert('Zadej výši poplatku.'); return; }
+  const selected=state.players.filter(p=>bulkSelected[p.id]);
+  if(selected.length===0) { alert('Vyber alespoň jednoho hráče.'); return; }
+  const sd=getSD(currentSeasonId);
+  if(!sd.fees) sd.fees=[];
+  selected.forEach(p=>{
+    const idx=sd.fees.findIndex(f=>f.playerId===p.id);
+    if(idx>=0) sd.fees[idx]={...sd.fees[idx],amount};
+    else sd.fees.push({playerId:p.id,amount,paid:0});
+  });
+  state.seasonData[currentSeasonId]=sd;
+  saveState(); closeModal('modal-bulk-fee');
+  renderSeasonPage();
+}
+
+// ==================== PLAYER TOTAL DEBT ====================
+function openPlayerDebt() {
+  const p = findPlayer(currentPlayerId);
+  if (!p) return;
+  document.getElementById('player-debt-sub').textContent = p.name;
+
+  let totalPaid = 0, totalAmount = 0;
+  const rows = [];
+
+  state.seasons.forEach(season => {
+    const fee = getFee(p.id, season.id);
+    const items = getPlayerItems(p.id, season.id);
+    if (!fee && items.length === 0) return;
+
+    let sPaid = 0, sAmount = 0;
+    const lineItems = [];
+
+    if (fee) {
+      sPaid += fee.paid || 0;
+      sAmount += fee.amount || 0;
+      const fRem = (fee.amount || 0) - (fee.paid || 0);
+      lineItems.push({ name: 'Sezónní poplatek', paid: fee.paid || 0, amount: fee.amount || 0, rem: fRem });
+    }
+    items.forEach(item => {
+      sPaid += item.paid || 0;
+      sAmount += item.amount || 0;
+      const iRem = (item.amount || 0) - (item.paid || 0);
+      lineItems.push({ name: item.name, paid: item.paid || 0, amount: item.amount || 0, rem: iRem });
+    });
+
+    totalPaid += sPaid;
+    totalAmount += sAmount;
+    rows.push({ seasonName: season.name, paid: sPaid, amount: sAmount, rem: sAmount - sPaid, items: lineItems });
+  });
+
+  const totalRemaining = Math.max(0, totalAmount - totalPaid);
+  document.getElementById('debt-total-remaining').textContent = totalRemaining.toLocaleString('cs') + ' Kč';
+  document.getElementById('debt-total-paid').textContent = totalPaid.toLocaleString('cs') + ' Kč';
+  document.getElementById('debt-total-amount').textContent = totalAmount.toLocaleString('cs') + ' Kč';
+
+  const container = document.getElementById('debt-seasons-list');
+  if (rows.length === 0) {
+    container.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:14px;padding:16px;">Žádné poplatky ani položky.</div>';
+  } else {
+    container.innerHTML = rows.map(r => {
+      const allPaid = r.rem <= 0;
+      const pct = r.amount ? Math.min(100, (r.paid / r.amount) * 100) : 0;
+      const itemsHtml = r.items.map(it => {
+        const iDone = it.rem <= 0;
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-top:1px solid var(--border);">
+          <span style="font-size:13px;color:var(--muted);">${it.name}</span>
+          <span style="font-size:13px;font-weight:600;color:${iDone ? 'var(--green2)' : it.rem > 0 ? 'var(--red2)' : 'var(--dark)'};">
+            ${it.rem > 0 ? '−' + it.rem.toLocaleString('cs') + ' Kč' : '<span style="color:var(--green2);">✓ splaceno</span>'}
+            <span style="font-size:11px;color:var(--muted);font-weight:400;"> (${it.paid.toLocaleString('cs')} / ${it.amount.toLocaleString('cs')} Kč)</span>
+          </span>
+        </div>`;
+      }).join('');
+      return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;color:var(--dark);text-transform:uppercase;letter-spacing:1px;">${r.seasonName}</span>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;color:${allPaid ? 'var(--green2)' : 'var(--red2)'};">
+            ${allPaid ? '✓ Splaceno' : '−' + Math.max(0, r.rem).toLocaleString('cs') + ' Kč'}
+          </span>
+        </div>
+        <div class="fee-bar" style="margin-bottom:8px;"><div class="fee-fill" style="width:${pct}%;background:${allPaid ? 'var(--green)' : 'var(--gold)'};"></div></div>
+        ${itemsHtml}
+      </div>`;
+    }).join('');
+  }
+
+  openModal('modal-player-debt');
+}
+
+// ==================== SEASON PAID SUMMARY ====================
+function openSeasonPaidSummary() {
+  const season = findSeason(currentSeasonId);
+  const fees = getFees(currentSeasonId);
+  document.getElementById('season-paid-sub').textContent = `Sezóna: ${season.name}`;
+
+  const totalPaid = fees.reduce((s, f) => s + (f.paid || 0), 0);
+  const totalAmount = fees.reduce((s, f) => s + (f.amount || 0), 0);
+  const totalRemaining = Math.max(0, totalAmount - totalPaid);
+
+  document.getElementById('season-paid-total').textContent = totalPaid.toLocaleString('cs') + ' Kč';
+  document.getElementById('season-paid-remaining').textContent = totalRemaining.toLocaleString('cs') + ' Kč';
+
+  const sorted = fees
+    .map(f => {
+      const player = state.players.find(p => p.id === f.playerId);
+      return { name: player ? player.name : '?', number: player ? player.number : null, paid: f.paid || 0, amount: f.amount || 0 };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const list = document.getElementById('season-paid-list');
+  if (sorted.length === 0) {
+    list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--muted);font-size:14px;">Žádné poplatky v sezóně.</div>';
+  } else {
+    list.innerHTML = sorted.map((r, i) => {
+      const pct = r.amount ? Math.min(100, (r.paid / r.amount) * 100) : 0;
+      const done = r.paid >= r.amount && r.amount > 0;
+      return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:${i < sorted.length - 1 ? '1px solid var(--border)' : 'none'};">
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:600;color:var(--dark);">${r.name}${r.number != null ? ` <span style="color:var(--muted);font-size:12px;">#${r.number}</span>` : ''}</div>
+          <div class="fee-bar" style="margin-top:5px;"><div class="fee-fill" style="width:${pct}%;background:${done ? 'var(--green)' : 'var(--gold)'};"></div></div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div style="font-size:14px;font-weight:700;color:${done ? 'var(--green2)' : 'var(--dark)'};">${r.paid.toLocaleString('cs')} Kč</div>
+          <div style="font-size:11px;color:var(--muted);">/ ${r.amount.toLocaleString('cs')} Kč</div>
+        </div>
+        ${done ? '<span class="badge badge-green" style="flex-shrink:0;">✓</span>' : ''}
+      </div>`;
+    }).join('');
+  }
+
+  openModal('modal-season-paid');
+}
+
+// ==================== NOTES ====================
+function autoSaveNotes() {
+  const ta = document.getElementById('player-notes-ta');
+  if (!ta) return;
+  state.players = state.players.map(p => p.id!==currentPlayerId ? p : {...p, notes: ta.value});
+  saveState();
+}
+
+// ==================== ITEMS ====================
+function getPlayerItems(pid,sid) {
+  const sd=getSD(sid);
+  return (sd.items||[]).filter(i=>i.playerId===pid);
+}
+function openAddItem(pid,sid) {
+  const p=findPlayer(pid); const s=findSeason(sid);
+  document.getElementById('item-modal-title').textContent='Přidat položku';
+  document.getElementById('item-modal-sub').textContent=`${p.name} — ${s.name}`;
+  document.getElementById('item-player-id').value=pid;
+  document.getElementById('item-season-id').value=sid;
+  document.getElementById('item-id').value='';
+  document.getElementById('item-name-input').value='';
+  document.getElementById('item-amount').value='';
+  document.getElementById('item-paid').value='0';
+  document.getElementById('item-remaining').textContent='—';
+  document.getElementById('item-delete-btn').style.display='none';
+  openModal('modal-item');
+}
+function openEditItem(pid,sid,iid) {
+  const p=findPlayer(pid); const s=findSeason(sid);
+  const sd=getSD(sid);
+  const item=(sd.items||[]).find(i=>i.id===iid);
+  if(!item) return;
+  document.getElementById('item-modal-title').textContent='Upravit položku';
+  document.getElementById('item-modal-sub').textContent=`${p.name} — ${s.name}`;
+  document.getElementById('item-player-id').value=pid;
+  document.getElementById('item-season-id').value=sid;
+  document.getElementById('item-id').value=iid;
+  document.getElementById('item-name-input').value=item.name;
+  document.getElementById('item-amount').value=item.amount;
+  document.getElementById('item-paid').value=item.paid;
+  document.getElementById('item-delete-btn').style.display='inline-flex';
+  updateItemRemaining();
+  openModal('modal-item');
+}
+function updateItemRemaining() {
+  const amount=Number(document.getElementById('item-amount').value)||0;
+  const paid=Number(document.getElementById('item-paid').value)||0;
+  const rem=Math.max(0,amount-paid);
+  const el=document.getElementById('item-remaining');
+  el.textContent=rem+' Kč';
+  el.style.color=rem===0?'var(--green2)':'var(--red2)';
+}
+function saveItem() {
+  const pid=document.getElementById('item-player-id').value;
+  const sid=document.getElementById('item-season-id').value;
+  const iid=document.getElementById('item-id').value;
+  const name=document.getElementById('item-name-input').value.trim();
+  const amount=Number(document.getElementById('item-amount').value)||0;
+  const paid=Math.min(amount,Number(document.getElementById('item-paid').value)||0);
+  if(!name) return;
+  const sd=getSD(sid);
+  if(!sd.items) sd.items=[];
+  if(iid) {
+    sd.items=sd.items.map(i=>i.id!==iid?i:{...i,name,amount,paid});
+  } else {
+    sd.items.push({id:uid(),playerId:pid,name,amount,paid});
+  }
+  state.seasonData[sid]=sd;
+  saveState(); closeModal('modal-item');
+  renderPlayerPage();
+}
+function deleteItem() {
+  if(!confirm('Smazat tuto položku?')) return;
+  const pid=document.getElementById('item-player-id').value;
+  const sid=document.getElementById('item-season-id').value;
+  const iid=document.getElementById('item-id').value;
+  const sd=getSD(sid);
+  sd.items=(sd.items||[]).filter(i=>i.id!==iid);
+  state.seasonData[sid]=sd;
+  saveState(); closeModal('modal-item');
+  renderPlayerPage();
+}
+
+// ==================== EDIT FEE ====================
+function openEditFee(pid,sid) {
+  const p=findPlayer(pid); const s=findSeason(sid);
+  const fee=getFee(pid,sid);
+  if(!fee) return;
+  document.getElementById('edit-fee-sub').textContent=`${p.name} — ${s.name}`;
+  document.getElementById('edit-fee-player-id').value=pid;
+  document.getElementById('edit-fee-season-id').value=sid;
+  document.getElementById('edit-fee-amount').value=fee.amount;
+  document.getElementById('edit-fee-paid').value=fee.paid;
+  updateEditFeeRemaining();
+  openModal('modal-edit-fee');
+}
+function updateEditFeeRemaining() {
+  const amount=Number(document.getElementById('edit-fee-amount').value)||0;
+  const paid=Number(document.getElementById('edit-fee-paid').value)||0;
+  const rem=Math.max(0,amount-paid);
+  document.getElementById('edit-fee-remaining').textContent=rem+' Kč';
+  document.getElementById('edit-fee-remaining').style.color=rem===0?'var(--green2)':'var(--red2)';
+}
+function saveEditFee() {
+  const pid=document.getElementById('edit-fee-player-id').value;
+  const sid=document.getElementById('edit-fee-season-id').value;
+  const amount=Number(document.getElementById('edit-fee-amount').value);
+  const paid=Number(document.getElementById('edit-fee-paid').value||0);
+  if(!amount&&amount!==0) return;
+  const sd=getSD(sid);
+  sd.fees=(sd.fees||[]).map(f=>f.playerId!==pid?f:{...f,amount,paid:Math.min(amount,paid)});
+  state.seasonData[sid]=sd;
+  saveState(); closeModal('modal-edit-fee');
+  renderPlayerPage();
+  if(currentPage==='season') renderSeasonPage();
+}
+function deleteFee() {
+  if(!confirm('Smazat poplatek pro tohoto hráče v této sezóně?')) return;
+  const pid=document.getElementById('edit-fee-player-id').value;
+  const sid=document.getElementById('edit-fee-season-id').value;
+  const sd=getSD(sid);
+  sd.fees=(sd.fees||[]).filter(f=>f.playerId!==pid);
+  state.seasonData[sid]=sd;
+  saveState(); closeModal('modal-edit-fee');
+  renderPlayerPage();
+}
+
+// ==================== INIT ====================
+loadAll();
+applySettings();
+injectPWAManifest(appSettings.logoSrc);
+renderHome();
+</script>
+</body>
+</html>
