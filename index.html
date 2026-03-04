@@ -800,6 +800,7 @@ function uid() { return Math.random().toString(36).slice(2)+Date.now().toString(
 function findPlayer(id) { return state.players.find(p=>p.id===id); }
 function findSeason(id) { return state.seasons.find(s=>s.id===id); }
 function getSD(sid) { return state.seasonData[sid] || {matches:[],fees:[]}; }
+function isNoFee(pid,sid) { return (getSD(sid).noFeePlayerIds||[]).includes(pid); }
 function getMatches(sid) { return getSD(sid).matches || []; }
 function getFees(sid) { return getSD(sid).fees || []; }
 function getFee(pid,sid) { return getFees(sid).find(f=>f.playerId===pid)||null; }
@@ -1061,7 +1062,12 @@ function renderSeasonTable() {
     const stateHtml = r.fee
       ? (r.isPaid ? `<span class="badge badge-green">✓ OK</span>`
           : `<button class="btn btn-gold btn-sm" onclick="openPayFee('${r.p.id}','${currentSeasonId}')">Zaplatit</button>`)
-      : `<button class="btn btn-secondary btn-sm" onclick="openAddFee('${r.p.id}','${currentSeasonId}')">+ Poplatek</button>`;
+      : isNoFee(r.p.id, currentSeasonId)
+        ? `<span class="badge badge-muted" style="cursor:pointer;" onclick="clearNoFee('${r.p.id}','${currentSeasonId}')" title="Klikni pro zrušení">🚫 Nemá poplatek</span>`
+        : `<div style="display:flex;gap:4px;flex-wrap:wrap;">
+             <button class="btn btn-secondary btn-sm" onclick="openAddFee('${r.p.id}','${currentSeasonId}')">+ Poplatek</button>
+             <button class="btn btn-ghost btn-sm" onclick="setNoFee('${r.p.id}','${currentSeasonId}')" title="Označit jako bez poplatku">🚫</button>
+           </div>`;
     const debtEmoji = r.amount > 0
       ? (r.isPaid ? '🫡' : r.remaining > r.amount / 2 ? '😡' : '😕')
       : '';
@@ -1078,6 +1084,23 @@ function renderSeasonTable() {
       <td onclick="event.stopPropagation()"><button class="btn btn-danger btn-sm" onclick="removePlayerFromSeason('${r.p.id}','${currentSeasonId}')" title="Odebrat z sezóny">✕</button></td>
     </tr>`;
   }).join('');
+}
+
+function setNoFee(pid, sid) {
+  const sd = getSD(sid);
+  if (!sd.noFeePlayerIds) sd.noFeePlayerIds = [];
+  if (!sd.noFeePlayerIds.includes(pid)) sd.noFeePlayerIds.push(pid);
+  state.seasonData[sid] = sd;
+  saveState();
+  renderSeasonTable();
+}
+function clearNoFee(pid, sid) {
+  const sd = getSD(sid);
+  sd.noFeePlayerIds = (sd.noFeePlayerIds || []).filter(id => id !== pid);
+  state.seasonData[sid] = sd;
+  saveState();
+  if (currentPage === 'season') renderSeasonTable();
+  if (currentPage === 'player') renderPlayerPage();
 }
 
 function removePlayerFromSeason(pid, sid) {
@@ -1147,6 +1170,11 @@ function renderPlayerPage() {
                <button class="btn btn-ghost btn-sm" onclick="openEditFee('${p.id}','${season.id}')" style="font-size:11px;" title="Upravit">✏️</button>
              </div>
            </div>
+         </div>`
+      : isNoFee(p.id, season.id)
+      ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+           <span class="badge badge-muted">🚫 Nemá poplatek</span>
+           <button class="btn btn-ghost btn-sm" style="font-size:11px;" onclick="clearNoFee('${p.id}','${season.id}');renderPlayerPage()">Zrušit</button>
          </div>`
       : `<button class="btn btn-secondary btn-sm" style="margin-bottom:6px;" onclick="openAddFee('${p.id}','${season.id}')">+ Poplatek za sezónu</button>`;
 
