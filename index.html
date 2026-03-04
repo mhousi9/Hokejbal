@@ -1021,7 +1021,9 @@ function renderSeasonTable() {
   const paidF = document.getElementById('sd-paid').value;
   const matches = getMatches(currentSeasonId);
 
+  const excluded = getSD(currentSeasonId).excludedPlayerIds || [];
   let rows = state.players
+    .filter(p=>!excluded.includes(p.id))
     .filter(p=>p.name.toLowerCase().includes(filter))
     .map(p=>{
       const pr=getPresent(p.id,currentSeasonId);
@@ -1073,9 +1075,20 @@ function renderSeasonTable() {
       <td><span style="color:var(--red);font-weight:700;">${r.games}</span><span style="color:var(--muted);font-size:12px;">/${matches.length}</span></td>
       <td>${feeHtml}</td>
       <td onclick="event.stopPropagation()">${stateHtml}</td>
-      <td></td>
+      <td onclick="event.stopPropagation()"><button class="btn btn-danger btn-sm" onclick="removePlayerFromSeason('${r.p.id}','${currentSeasonId}')" title="Odebrat z sezóny">✕</button></td>
     </tr>`;
   }).join('');
+}
+
+function removePlayerFromSeason(pid, sid) {
+  const p = findPlayer(pid);
+  if (!confirm(`Odebrat hráče "${p.name}" z této sezóny?\n\nHráč zůstane v hlavním seznamu hráčů.`)) return;
+  const sd = getSD(sid);
+  if (!sd.excludedPlayerIds) sd.excludedPlayerIds = [];
+  if (!sd.excludedPlayerIds.includes(pid)) sd.excludedPlayerIds.push(pid);
+  state.seasonData[sid] = sd;
+  saveState();
+  renderSeasonTable();
 }
 
 function deleteMatch(mid) {
@@ -1195,7 +1208,8 @@ function renderPlayerPage() {
 // ==================== ADD MATCH ====================
 function openAddMatch() {
   matchPresence={};
-  const sorted=[...state.players].sort((a,b)=>a.name.localeCompare(b.name));
+  const excluded = getSD(currentSeasonId).excludedPlayerIds || [];
+  const sorted=[...state.players].filter(p=>!excluded.includes(p.id)).sort((a,b)=>a.name.localeCompare(b.name));
   document.getElementById('match-players-list').innerHTML=sorted.map(p=>`
     <div class="pcitem" id="pc-${p.id}">
       <div class="chkbox" id="chkp-${p.id}" onclick="togglePresence('${p.id}','present')" title="Byl"></div>
@@ -1424,6 +1438,12 @@ function addPlayerToSeason() {
     player={id:uid(),name,number:numW??numG??null,numberWhite:numW,numberGreen:numG,size,pos};
     state.players.push(player);
   }
+  // Pokud byl hráč odebrán ze sezóny, znovu ho přidat
+  const sd2 = getSD(currentSeasonId);
+  if (sd2.excludedPlayerIds) {
+    sd2.excludedPlayerIds = sd2.excludedPlayerIds.filter(id => id !== player.id);
+    state.seasonData[currentSeasonId] = sd2;
+  }
   saveState(); closeModal('modal-season-add-player');
   if(currentPage==='players') renderPlayersTable();
   renderSeasonPage();
@@ -1437,7 +1457,8 @@ function openBulkFee() {
   document.getElementById('bulk-fee-amount').value='';
   // Build player checklist
   bulkSelected={};
-  const sorted=[...state.players].sort((a,b)=>a.name.localeCompare(b.name));
+  const excluded = getSD(currentSeasonId).excludedPlayerIds || [];
+  const sorted=[...state.players].filter(p=>!excluded.includes(p.id)).sort((a,b)=>a.name.localeCompare(b.name));
   sorted.forEach(p=>{ bulkSelected[p.id]=true; }); // select all by default
   renderBulkList(sorted);
   openModal('modal-bulk-fee');
