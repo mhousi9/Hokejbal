@@ -594,8 +594,11 @@
     <div class="vol-label" id="volLabel">Hlasitost mikrofonu</div>
   </div>
 
-  <!-- Přepis -->
-  <div class="transcript-box">
+  <!-- Debug panel -->
+  <div class="context-section" id="debugPanel" style="margin-bottom:20px">
+    <div class="context-title">🔬 Diagnostika Speech API</div>
+    <div id="debugLog" style="font-size:12px; font-family:monospace; line-height:1.8"></div>
+  </div>
     <div class="transcript-icon">🗣</div>
     <div class="transcript-text" id="transcriptText">Zde se zobrazí přepis hlasu...</div>
   </div>
@@ -775,25 +778,47 @@ function setupSpeech() {
   }
 }
 
+function dbg(msg, color) {
+  const el = document.getElementById('debugLog');
+  const t = new Date().toLocaleTimeString('cs-CZ', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  el.innerHTML = `<div style="color:${color||'#6b7280'}">${t} ${msg}</div>` + el.innerHTML;
+}
+
 function createRecognition() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const r = new SR();
   r.lang = 'cs-CZ';
-  r.continuous = false;       // false je spolehlivější na mobilním Chrome
+  r.continuous = false;
   r.interimResults = true;
-  r.maxAlternatives = 3;      // více alternativ = lepší šance na shodu
+  r.maxAlternatives = 3;
+
+  r.onstart      = () => dbg('▶ onstart — recognition spuštěna', '#60a5fa');
+  r.onaudiostart = () => dbg('🎙 onaudiostart — zachycuje zvuk', '#34d399');
+  r.onsoundstart = () => dbg('🔊 onsoundstart — detekován zvuk', '#34d399');
+  r.onspeechstart= () => dbg('🗣 onspeechstart — detekována řeč!', '#f7a238');
+  r.onspeechend  = () => dbg('🗣 onspeechend — řeč skončila', '#f7a238');
+  r.onsoundend   = () => dbg('🔇 onsoundend', '#6b7280');
+  r.onaudioend   = () => dbg('🎙 onaudioend', '#6b7280');
+  r.onend        = () => {
+    dbg('⏹ onend — recognition ukončena', '#6b7280');
+    if (isListening) {
+      dbg('↺ restartuji...', '#60a5fa');
+      try { setTimeout(() => { if (isListening) r.start(); }, 200); } catch(e) {}
+    }
+  };
 
   r.onresult = (e) => {
+    dbg(`✅ onresult — ${e.results.length} výsledků`, '#34d399');
     let interim = '', final = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
       if (e.results[i].isFinal) final += e.results[i][0].transcript;
       else interim += e.results[i][0].transcript;
     }
+    dbg(`📝 text: "${final || interim}" (final:${!!final})`, '#e8eaf0');
     const display = accumulatedText + (final || interim);
     setTranscript(display, !!final);
     if (final) {
       accumulatedText += final + ' ';
-      // Po 1.5s ticha považuj větu za dokončenou
       clearTimeout(restartTimer);
       restartTimer = setTimeout(() => {
         if (isListening && accumulatedText.trim()) {
@@ -806,26 +831,17 @@ function createRecognition() {
     }
   };
 
-  r.onend = () => {
-    // Mobilní Chrome recognition samo ukončí po tichu — restartujeme
-    if (isListening) {
-      try { r.start(); } catch(e) { /* ignore */ }
-    }
-  };
-
   r.onerror = (e) => {
+    dbg(`❌ onerror: ${e.error}`, '#e8433a');
     const msgs = {
       'not-allowed':   '🚫 Přístup k mikrofonu zamítnut — povol ho v nastavení prohlížeče',
-      'no-speech':     null,
       'network':       '🌐 Chyba sítě — Speech API potřebuje internet',
-      'audio-capture': '🎙️ Mikrofon nenalezen — zkontroluj připojení',
-      'aborted':       null,
+      'audio-capture': '🎙️ Mikrofon nenalezen',
     };
     const msg = msgs[e.error];
     if (msg) { showToast(msg, 'error'); stopListening(); }
-    // no-speech / aborted — jen restart
     else if (isListening) {
-      try { setTimeout(() => { if (isListening) r.start(); }, 200); } catch(e) {}
+      try { setTimeout(() => { if (isListening) r.start(); }, 300); } catch(e) {}
     }
   };
   return r;
