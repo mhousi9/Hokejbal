@@ -432,30 +432,33 @@ hr.divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
       <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
         <button class="btn btn-green btn-sm" onclick="selectAllPresent()">Označit všechny</button>
         <button class="btn btn-ghost btn-sm" onclick="clearPresence()">Vymazat vše</button>
-        <button class="btn btn-secondary btn-sm" id="voiceBtn" onclick="voiceToggle()" style="display:flex;align-items:center;gap:5px;">🎙️ Hlas</button>
+        <button class="btn btn-secondary btn-sm" onclick="voiceToggle()" style="display:flex;align-items:center;gap:5px;">🎙️ Hlas</button>
       </div>
-      <div id="voiceBar" style="display:none;margin-bottom:10px;padding:10px 12px;background:var(--surface2,#f5f5f5);border:1px solid var(--border,#ddd);border-radius:10px;">
+      <div id="voiceBar" style="display:none;margin-bottom:10px;padding:10px 12px;background:#f0f0f0;border:1px solid #ddd;border-radius:10px;">
         <div style="display:flex;align-items:center;gap:10px;">
-          <div id="voiceDot" style="width:10px;height:10px;border-radius:50%;background:#aaa;flex-shrink:0;transition:background .3s;"></div>
-          <div style="flex:1;">
+          <div id="voiceDot" style="width:10px;height:10px;border-radius:50%;background:#aaa;flex-shrink:0;"></div>
+          <div style="flex:1">
             <div id="voiceStatus" style="font-size:13px;font-weight:600;">Načítám Whisper...</div>
-            <div id="voiceHint" style="font-size:11px;color:var(--muted);margin-top:1px;">První načtení ~80 MB, pak v cache</div>
+            <div id="voiceHint" style="font-size:11px;color:#888;margin-top:1px;">První načtení ~80 MB, pak v cache</div>
           </div>
-          <div id="voiceSpinner" style="width:16px;height:16px;border:2px solid #ddd;border-top-color:var(--accent,#e8433a);border-radius:50%;animation:vspin .7s linear infinite;display:none;flex-shrink:0;"></div>
+          <div id="voiceSpinner" style="width:16px;height:16px;border:2px solid #ddd;border-top-color:#e8433a;border-radius:50%;animation:vspin .7s linear infinite;display:none;flex-shrink:0;"></div>
         </div>
-        <div id="voiceMicWrap" style="display:none;margin-top:10px;text-align:center;">
-          <button id="voiceMicBtn" onclick="voiceRecord()" style="width:60px;height:60px;border-radius:50%;border:2px solid #ddd;background:#f5f5f5;font-size:26px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;">🎙️</button>
-          <div id="voiceMicLabel" style="font-size:12px;color:var(--muted);margin-top:6px;">Klepni a řekni příjmení (nebo "konec")</div>
-          <div id="voiceResult" style="font-size:13px;color:var(--muted);margin-top:6px;min-height:18px;font-style:italic;"></div>
+        <div id="voiceMicWrap" style="display:none;margin-top:12px;text-align:center;">
+          <button id="voiceMicBtn" onclick="voiceRecord()" style="width:64px;height:64px;border-radius:50%;border:2px solid #ccc;background:#fff;font-size:28px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;">🎙️</button>
+          <div id="voiceMicLbl" style="font-size:12px;color:#888;margin-top:6px;">Klepni a řekni příjmení (nebo "konec")</div>
+          <div id="voiceResult" style="font-size:13px;margin-top:8px;min-height:20px;line-height:1.5;"></div>
         </div>
-        <div id="voiceProgress" style="display:none;margin-top:8px;">
+        <div id="voiceProgress" style="display:none;margin-top:10px;">
           <div style="background:#ddd;border-radius:3px;height:4px;overflow:hidden;">
             <div id="voiceProgressBar" style="height:100%;background:linear-gradient(90deg,#e8433a,#f7a238);width:0%;transition:width .3s;border-radius:3px;"></div>
           </div>
-          <div id="voiceProgressLabel" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
+          <div id="voiceProgressLbl" style="font-size:11px;color:#888;margin-top:4px;"></div>
         </div>
       </div>
-      <style>@keyframes vspin{to{transform:rotate(360deg)}}@keyframes vpulse{0%{box-shadow:0 0 0 0 rgba(232,67,58,.45)}70%{box-shadow:0 0 0 14px rgba(232,67,58,0)}100%{box-shadow:0 0 0 0 rgba(232,67,58,0)}}</style>
+      <style>
+        @keyframes vspin{to{transform:rotate(360deg)}}
+        @keyframes vpulse{0%{box-shadow:0 0 0 0 rgba(232,67,58,.5)}70%{box-shadow:0 0 0 16px rgba(232,67,58,0)}100%{box-shadow:0 0 0 0 rgba(232,67,58,0)}}
+      </style>
       <div class="pclist" id="match-players-list"></div>
     </div>
     <div class="modal-footer">
@@ -2021,206 +2024,160 @@ injectPWAManifest(appSettings.logoSrc);
 renderHome();
 </script>
 
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.min.js"></script>
 <script type="module">
 import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js';
 env.allowLocalModels = false;
 
-let whisper = null, whisperLoading = false;
-let isRecording = false, mediaRecorder = null, audioChunks = [];
-let recInterval = null, recSecs = 0, micStream = null;
+// ── Stav ──────────────────────────────────────────────────────
+let whisper = null;
+let whisperLoading = false;
+let isListening = false;
 
-// ── Normalizace — odstraní diakritiku, lowercase ──────────────
+// ── Normalizace — odstraní diakritiku ─────────────────────────
 function norm(s) {
-  return s.toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-    .replace(/[.,!?]/g,'').trim();
+  return (s || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[.,!?;:]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-// ── Levenshtein vzdálenost ────────────────────────────────────
-function lev(a, b) {
-  const m=a.length, n=b.length;
-  if(Math.abs(m-n)>4) return 99;
-  const dp=Array.from({length:m+1},(_,i)=>Array.from({length:n+1},(_,j)=>i===0?j:j===0?i:0));
-  for(let i=1;i<=m;i++) for(let j=1;j<=n;j++)
-    dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]:1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
-  return dp[m][n];
+// ── Načti hráče z DOMu ────────────────────────────────────────
+function getPlayersFromDOM() {
+  return Array.from(document.querySelectorAll('#match-players-list .pcitem')).map(item => {
+    const id = item.id.replace('pc-', '');
+    const name = Array.from(item.querySelectorAll('span')).find(s => s.textContent.trim().length > 2)?.textContent?.trim() || '';
+    return { id, name, normName: norm(name) };
+  }).filter(p => p.name);
 }
 
-// ── Skóre shody slova se jménem ───────────────────────────────
-// Vrací 0–1, kde 1 = perfektní shoda
-function wordScore(word, namePart) {
-  const w = norm(word), p = norm(namePart);
-  if(w === p) return 1;
-  if(w.length < 3 || p.length < 3) return 0;
-  const dist = lev(w, p);
-  const maxLen = Math.max(w.length, p.length);
-  const ratio = 1 - dist/maxLen;
-  return ratio >= 0.6 ? ratio : 0;
-}
-
-// ── Hlavní matching: vrátí pole {player, score} ───────────────
-function findPlayers(text, players) {
-  const words = norm(text).split(/\s+/).filter(w=>w.length>2);
-  const scores = players.map(p => {
-    const parts = p.name.split(/\s+/); // ["Brodský","Julián"]
-    let best = 0;
-    parts.forEach(part => {
-      words.forEach(w => {
-        const s = wordScore(w, part);
-        if(s > best) best = s;
-      });
-    });
-    return {player: p, score: best};
-  });
-  // Vrátíme jen ty co mají score >= 0.6, seřazené
-  return scores.filter(x=>x.score>=0.6).sort((a,b)=>b.score-a.score);
-}
-
-function getActivePlayers() {
-  const excluded = window.currentSeasonId
-    ? (window.getSD?.(window.currentSeasonId)?.excludedPlayerIds || []) : [];
-  return (window.state?.players||[]).filter(p=>!excluded.includes(p.id));
+// ── Fuse.js matching ──────────────────────────────────────────
+function findPlayers(text) {
+  const players = getPlayersFromDOM();
+  if (!players.length) return [];
+  const fuse = new Fuse(players, { keys: ['normName'], threshold: 0.4, includeScore: true, minMatchCharLength: 3 });
+  const words = norm(text).split(' ').filter(w => w.length >= 3);
+  const found = new Map();
+  words.forEach(w => fuse.search(w).forEach(r => { if (!found.has(r.item.id)) found.set(r.item.id, r.item); }));
+  fuse.search(norm(text)).forEach(r => { if (!found.has(r.item.id)) found.set(r.item.id, r.item); });
+  return Array.from(found.values());
 }
 
 // ── UI helpers ────────────────────────────────────────────────
-function setStatus(txt, hint='', color='#aaa') {
+function setStatus(txt, hint, dot) {
   document.getElementById('voiceStatus').textContent = txt;
-  document.getElementById('voiceHint').textContent = hint;
-  document.getElementById('voiceDot').style.background = color;
+  document.getElementById('voiceHint').textContent = hint || '';
+  document.getElementById('voiceDot').style.background = dot || '#aaa';
 }
-function setSpinner(on) { document.getElementById('voiceSpinner').style.display = on?'inline-block':'none'; }
+function setSpinner(on) {
+  document.getElementById('voiceSpinner').style.display = on ? 'inline-block' : 'none';
+}
 function setMicState(s) {
-  const btn=document.getElementById('voiceMicBtn');
-  const lbl=document.getElementById('voiceMicLabel');
-  if(s==='idle') {
-    btn.style.cssText='width:60px;height:60px;border-radius:50%;border:2px solid #ddd;background:#f5f5f5;font-size:26px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;';
-    btn.textContent='🎙️'; lbl.textContent='Klepni a řekni příjmení (nebo "konec")';
-  } else if(s==='rec') {
-    btn.style.cssText='width:60px;height:60px;border-radius:50%;border:2px solid #e8433a;background:#e8433a;font-size:26px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:#fff;animation:vpulse 1.2s ease infinite;';
-    btn.textContent='⏹'; lbl.textContent='Nahrávám... klepni pro stop';
-  } else if(s==='busy') {
-    btn.style.cssText='width:60px;height:60px;border-radius:50%;border:2px solid #60a5fa;background:transparent;font-size:26px;cursor:not-allowed;display:inline-flex;align-items:center;justify-content:center;opacity:.6;';
-    btn.textContent='🎙️'; lbl.textContent='Přepisuji...';
+  const btn = document.getElementById('voiceMicBtn');
+  const lbl = document.getElementById('voiceMicLbl');
+  if (s === 'rec') {
+    btn.style.cssText = 'width:64px;height:64px;border-radius:50%;border:2px solid #e8433a;background:#e8433a;font-size:28px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:#fff;animation:vpulse 1.2s ease infinite;';
+    btn.textContent = '⏹'; lbl.textContent = 'Poslouchám... klepni pro stop';
+  } else {
+    btn.style.cssText = 'width:64px;height:64px;border-radius:50%;border:2px solid #ccc;background:#fff;font-size:28px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;';
+    btn.textContent = '🎙️'; lbl.textContent = 'Klepni a řekni příjmení (nebo "konec")';
   }
 }
+function appendResult(txt, color) {
+  const el = document.getElementById('voiceResult');
+  if (el.children.length >= 5) el.removeChild(el.firstChild);
+  const d = document.createElement('div');
+  d.textContent = txt; d.style.color = color || '#888';
+  el.appendChild(d);
+}
+function clearResult() { document.getElementById('voiceResult').innerHTML = ''; }
 
-// ── Načíst model ──────────────────────────────────────────────
+// ── Načíst Whisper ────────────────────────────────────────────
 async function loadWhisper() {
-  if(whisper||whisperLoading) return;
-  whisperLoading=true;
-  setStatus('Načítám Whisper...','První načtení ~80 MB, pak v cache'); setSpinner(true);
-  document.getElementById('voiceProgress').style.display='block';
+  if (whisper || whisperLoading) return;
+  whisperLoading = true;
+  setStatus('Načítám Whisper...', 'První načtení ~80 MB, pak v cache'); setSpinner(true);
+  document.getElementById('voiceProgress').style.display = 'block';
   try {
-    whisper = await pipeline('automatic-speech-recognition','Xenova/whisper-small',{
-      quantized:true,
-      progress_callback: p=>{
-        const pct=p.progress?Math.round(p.progress):0;
-        if(p.status==='downloading'||p.status==='progress'){
-          document.getElementById('voiceProgressBar').style.width=pct+'%';
-          document.getElementById('voiceProgressLabel').textContent=(p.file||'soubor')+' — '+pct+'%';
+    whisper = await pipeline('automatic-speech-recognition', 'Xenova/whisper-small', {
+      quantized: true,
+      progress_callback: p => {
+        const pct = p.progress ? Math.round(p.progress) : 0;
+        if (p.status === 'downloading' || p.status === 'progress') {
+          document.getElementById('voiceProgressBar').style.width = pct + '%';
+          document.getElementById('voiceProgressLbl').textContent = (p.file || '') + ' — ' + pct + '%';
         }
       }
     });
-    document.getElementById('voiceProgress').style.display='none';
+    document.getElementById('voiceProgress').style.display = 'none';
     setSpinner(false);
-    setStatus('✅ Připraven','Řekni příjmení nebo více příjmení najednou','#34d399');
-    document.getElementById('voiceMicWrap').style.display='block';
+    setStatus('✅ Připraven', 'Řekni příjmení nebo více příjmení najednou', '#22c55e');
+    document.getElementById('voiceMicWrap').style.display = 'block';
     setMicState('idle');
-  } catch(e) {
-    setSpinner(false); setStatus('❌ Chyba: '+e.message,'','#e8433a'); whisperLoading=false;
+  } catch (e) {
+    setSpinner(false); setStatus('❌ ' + e.message, 'Zkus znovu', '#e8433a'); whisperLoading = false;
   }
 }
 
-// ── Nahrávání ─────────────────────────────────────────────────
-window.voiceRecord = async function() {
-  if(!whisper) return;
-  if(isRecording){stopRec();return;}
-  try {
-    const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
-    micStream=stream; audioChunks=[]; isRecording=true; recSecs=0;
-    const mime=['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4'].find(t=>MediaRecorder.isTypeSupported(t))||'';
-    mediaRecorder=new MediaRecorder(stream,mime?{mimeType:mime}:{});
-    mediaRecorder.ondataavailable=e=>{if(e.data.size>0)audioChunks.push(e.data);};
-    mediaRecorder.start(100);
-    setMicState('rec');
-    document.getElementById('voiceResult').textContent='';
-    recInterval=setInterval(()=>{recSecs++;if(recSecs>=8)stopRec();},1000);
-  } catch(e) {
-    document.getElementById('voiceResult').textContent='🚫 Mikrofon: '+e.message;
-  }
+// ── Nahrávání — smyčka krátkých chunků ───────────────────────
+window.voiceRecord = async function () {
+  if (!whisper) return;
+  if (isListening) { isListening = false; setMicState('idle'); return; }
+  try { await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (e) { appendResult('🚫 ' + e.message, '#e8433a'); return; }
+  isListening = true; setMicState('rec'); clearResult();
+  await recordLoop();
 };
 
-function stopRec() {
-  if(!mediaRecorder||!isRecording) return;
-  isRecording=false; clearInterval(recInterval); setMicState('busy');
-  mediaRecorder.onstop=async()=>{
-    const blob=new Blob(audioChunks,{type:audioChunks[0]?.type||'audio/webm'});
-    await processVoice(blob);
-    setMicState('idle');
-  };
-  mediaRecorder.stop(); micStream.getTracks().forEach(t=>t.stop());
-}
-
-// ── Zpracování hlasu ──────────────────────────────────────────
-async function processVoice(blob) {
-  const res=document.getElementById('voiceResult');
-  res.textContent='⏳ Přepisuji...'; res.style.color='#aaa'; res.style.fontStyle='italic';
-  try {
-    const ab=await blob.arrayBuffer();
-    const ctx=new (window.AudioContext||window.webkitAudioContext)({sampleRate:16000});
-    const decoded=await ctx.decodeAudioData(ab);
-    const f32=decoded.getChannelData(0);
-    const result=await whisper(f32,{language:'czech',task:'transcribe',chunk_length_s:30});
-    const text=result.text.trim();
-    res.style.fontStyle='normal';
-
-    // "Konec" → označit zbytek jako absent
-    if(norm(text).match(/^konec|hotovo/)) {
-      getActivePlayers().forEach(p=>{
-        if(window.matchPresence?.[p.id]===undefined) window.togglePresence?.(p.id,'absent');
+async function recordLoop() {
+  while (isListening) {
+    const blob = await recordChunk(2500);
+    if (!isListening) break;
+    if (!blob || blob.size < 500) continue;
+    let text = '';
+    try {
+      const ab = await blob.arrayBuffer();
+      const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+      const f32 = (await ctx.decodeAudioData(ab)).getChannelData(0);
+      text = (await whisper(f32, { language: 'czech', task: 'transcribe', chunk_length_s: 10 })).text.trim();
+    } catch { continue; }
+    if (!text || text.length < 2) continue;
+    if (norm(text).match(/\bkonec\b|\bhotovo\b/)) {
+      document.querySelectorAll('#match-players-list .pcitem').forEach(item => {
+        if (!item.classList.contains('cp') && !item.classList.contains('ca'))
+          window.togglePresence?.(item.id.replace('pc-', ''), 'absent');
       });
-      res.textContent='✅ Hotovo — zbytek označen jako chybí';
-      res.style.color='#34d399'; return;
+      appendResult('✅ Hotovo — zbytek označen jako chybí', '#22c55e');
+      isListening = false; setMicState('idle'); return;
     }
-
-    const players=getActivePlayers();
-    const matches=findPlayers(text,players);
-
-    if(matches.length===0) {
-      res.textContent='❓ "'+text+'" — nikdo nenalezen';
-      res.style.color='#f7a238';
+    const matched = findPlayers(text);
+    if (matched.length > 0) {
+      matched.forEach(p => window.togglePresence?.(p.id, 'present'));
+      appendResult('✅ ' + matched.map(p => p.name).join(', '), '#22c55e');
     } else {
-      // Zobrazit přepis + co bylo nalezeno
-      const found=[];
-      // Greedy: bereme nejlepší shody pokud jsou různí hráči
-      const used=new Set();
-      matches.forEach(m=>{
-        if(!used.has(m.player.id)&&m.score>=0.6){
-          used.add(m.player.id); found.push(m.player);
-        }
-      });
-      // Pokud 1 hráč — rovnou označit
-      if(found.length===1) {
-        window.togglePresence?.(found[0].id,'present');
-        res.textContent='✅ '+found[0].name+' (přepis: "'+text+'")';
-        res.style.color='#34d399';
-      } else if(found.length>1) {
-        // Více hráčů nalezeno najednou — označit všechny
-        found.forEach(p=>window.togglePresence?.(p.id,'present'));
-        res.textContent='✅ '+found.map(p=>p.name).join(', ');
-        res.style.color='#34d399';
-      }
+      appendResult('❓ "' + text + '"', '#f59e0b');
     }
-  } catch(e) {
-    res.textContent='Chyba: '+e.message; res.style.color='#e8433a';
   }
+  setMicState('idle');
 }
 
-window.voiceToggle=function(){
-  const bar=document.getElementById('voiceBar');
-  const open=bar.style.display!=='none';
-  bar.style.display=open?'none':'block';
-  if(!open&&!whisper&&!whisperLoading) loadWhisper();
+function recordChunk(ms) {
+  return new Promise(async resolve => {
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch { resolve(null); return; }
+    const chunks = [];
+    const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'].find(t => MediaRecorder.isTypeSupported(t)) || '';
+    const mr = new MediaRecorder(stream, mime ? { mimeType: mime } : {});
+    mr.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    mr.onstop = () => { stream.getTracks().forEach(t => t.stop()); resolve(chunks.length ? new Blob(chunks, { type: chunks[0].type }) : null); };
+    mr.start(); setTimeout(() => { if (mr.state !== 'inactive') mr.stop(); }, ms);
+  });
+}
+
+// ── Toggle panelu ─────────────────────────────────────────────
+window.voiceToggle = function () {
+  const bar = document.getElementById('voiceBar');
+  const open = bar.style.display !== 'none';
+  bar.style.display = open ? 'none' : 'block';
+  if (!open && !whisper && !whisperLoading) loadWhisper();
 };
 </script>
 </body>
