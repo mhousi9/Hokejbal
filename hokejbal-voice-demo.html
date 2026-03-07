@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hlasové zadávání — Hokejbal</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #12151c;
+    --surface2: #1a1e28;
+    --border: #252a38;
+    --accent: #e8433a;
+    --accent2: #f7a238;
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --success: #34d399;
+    --info: #60a5fa;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+
+  /* Background texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 20% 10%, rgba(232,67,58,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 60% at 80% 80%, rgba(247,162,56,0.05) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .container {
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 32px;
+  }
+  .logo {
+    width: 48px; height: 48px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .header-text h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 1px;
+    line-height: 1;
+  }
+  .header-text p {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .badge {
+    margin-left: auto;
+    background: rgba(96,165,250,0.12);
+    border: 1px solid rgba(96,165,250,0.25);
+    color: var(--info);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  /* API Key setup */
+  .api-setup {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .api-setup label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: block;
+    margin-bottom: 8px;
+  }
+  .api-row {
+    display: flex;
+    gap: 8px;
+  }
+  .api-setup input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .api-setup input:focus { border-color: var(--accent); }
+  .btn-save {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+  }
+  .btn-save:hover { opacity: 0.85; }
+  .api-status {
+    font-size: 12px;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+  }
+  .dot.green { background: var(--success); }
+  .dot.red { background: var(--accent); }
+
+  /* Mic button */
+  .mic-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+    position: relative;
+  }
+
+  .mic-btn {
+    width: 88px; height: 88px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    background: var(--surface2);
+    border: 2px solid var(--border);
+    color: var(--muted);
+    font-size: 32px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.25s ease;
+    position: relative;
+    z-index: 2;
+  }
+  .mic-btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+    transform: scale(1.05);
+  }
+  .mic-btn.listening {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+    animation: pulse-ring 1.5s ease infinite;
+  }
+  .mic-btn.processing {
+    background: var(--surface2);
+    border-color: var(--info);
+    color: var(--info);
+    cursor: not-allowed;
+  }
+  .mic-btn:disabled { cursor: not-allowed; }
+
+  @keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 rgba(232,67,58,0.4); }
+    70% { box-shadow: 0 0 0 20px rgba(232,67,58,0); }
+    100% { box-shadow: 0 0 0 0 rgba(232,67,58,0); }
+  }
+
+  .mic-label {
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+    min-height: 20px;
+    transition: color 0.2s;
+  }
+  .mic-label.active { color: var(--accent); }
+  .mic-label.processing { color: var(--info); }
+
+  /* Waveform */
+  .waveform-wrap {
+    width: 100%;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    margin: 8px 0 4px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .waveform-wrap.active { opacity: 1; }
+  .waveform-bar {
+    width: 4px;
+    border-radius: 2px;
+    background: var(--accent);
+    height: 4px;
+    transition: height 0.05s ease;
+    flex-shrink: 0;
+  }
+  .vol-meter {
+    width: 100%;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 4px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .vol-meter.active { opacity: 1; }
+  .vol-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--success), var(--accent2), var(--accent));
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.05s ease;
+  }
+  .vol-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 4px;
+    min-height: 16px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .vol-label.active { opacity: 1; }
+
+  /* Transcript */
+  .transcript-box {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-bottom: 20px;
+    min-height: 64px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .transcript-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+    opacity: 0.5;
+  }
+  .transcript-text {
+    font-size: 15px;
+    color: var(--muted);
+    font-style: italic;
+    line-height: 1.5;
+    transition: color 0.2s;
+  }
+  .transcript-text.has-text {
+    color: var(--text);
+    font-style: normal;
+  }
+
+  /* Result card */
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 20px;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: all 0.3s ease;
+  }
+  .result-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .result-header {
+    padding: 14px 18px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+  }
+  .result-body {
+    padding: 18px;
+  }
+  .intent-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 14px;
+  }
+  .intent-chip.payment { background: rgba(52,211,153,0.12); color: var(--success); border: 1px solid rgba(52,211,153,0.25); }
+  .intent-chip.view { background: rgba(96,165,250,0.12); color: var(--info); border: 1px solid rgba(96,165,250,0.25); }
+  .intent-chip.add { background: rgba(247,162,56,0.12); color: var(--accent2); border: 1px solid rgba(247,162,56,0.25); }
+  .intent-chip.unknown { background: rgba(107,114,128,0.15); color: var(--muted); border: 1px solid var(--border); }
+
+  .params-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .param-item {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+  }
+  .param-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .param-value {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .param-value.matched { color: var(--success); }
+  .param-value.unmatched { color: var(--accent2); }
+
+  .confidence-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+  .confidence-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    transition: width 0.6s ease;
+  }
+
+  .action-btn {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, var(--accent), #c0392b);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .action-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .action-btn:active { transform: translateY(0); }
+  .action-btn.secondary {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .btn-row { display: flex; gap: 8px; }
+
+  /* Example commands */
+  .examples {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .examples-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+  .example-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 7px 14px;
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+    margin: 0 6px 8px 0;
+    transition: all 0.2s;
+  }
+  .example-pill:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(232,67,58,0.07);
+  }
+  .example-pill span { font-size: 15px; }
+
+  /* Data context */
+  .context-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .context-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .players-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .player-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+  .player-chip .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+  }
+  .player-chip .status-dot.paid { background: var(--success); }
+  .player-chip .status-dot.unpaid { background: var(--accent); }
+
+  /* Log */
+  .log-section {
+    margin-top: 8px;
+  }
+  .log-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .log-entry:last-child { border-bottom: none; }
+  .log-time { color: var(--muted); font-size: 11px; flex-shrink: 0; margin-top: 2px; }
+  .log-msg { color: var(--text); line-height: 1.4; }
+  .log-msg .hl { color: var(--accent2); font-weight: 500; }
+
+  /* Spinner */
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--info);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .hidden { display: none !important; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: transform 0.3s ease;
+    z-index: 100;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { border-color: rgba(52,211,153,0.4); color: var(--success); }
+  .toast.error { border-color: rgba(232,67,58,0.4); color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <div class="logo">🏒</div>
+    <div class="header-text">
+      <h1>Hlasové zadávání</h1>
+      <p>NFC Sparta Kladno · Demo integrace</p>
+    </div>
+    <div class="badge">PWA</div>
+  </div>
+
+  <!-- API Key -->
+  <div class="api-setup">
+    <label>Anthropic API klíč</label>
+    <div class="api-row">
+      <input type="password" id="apiKeyInput" placeholder="sk-ant-..." />
+      <button class="btn-save" onclick="saveApiKey()">Uložit</button>
+    </div>
+    <div class="api-status">
+      <div class="dot" id="apiDot"></div>
+      <span id="apiStatusText">Klíč nezadán — demo bude simulovat odpověď</span>
+    </div>
+  </div>
+
+  <!-- Data kontext (simulovaná data aplikace) -->
+  <div class="context-section">
+    <div class="context-title">
+      📋 Kontext aplikace (co AI vidí)
+    </div>
+    <div style="font-size:12px; color:var(--muted); margin-bottom:10px;">Sezóna: <strong style="color:var(--text)">Jaro 2025</strong></div>
+    <div class="players-list" id="playersList"></div>
+  </div>
+
+  <!-- Příklady -->
+  <div class="examples">
+    <div class="examples-title">💬 Zkus říct (nebo klikni)</div>
+    <div>
+      <div class="example-pill" onclick="simulateVoice('Novák ještě nezaplatil za jaro')"><span>💸</span> Novák ještě nezaplatil</div>
+      <div class="example-pill" onclick="simulateVoice('Zadej Procházkovi platbu 500 korun za zimní sezónu')"><span>✅</span> Platba Procházkovi</div>
+      <div class="example-pill" onclick="simulateVoice('Ukaž mi kdo má dluh')"><span>👁</span> Kdo má dluh?</div>
+      <div class="example-pill" onclick="simulateVoice('Přidej nového hráče Tomáš Kratochvíl')"><span>➕</span> Nový hráč</div>
+      <div class="example-pill" onclick="simulateVoice('Kolik má Svoboda dluh celkem')"><span>🔢</span> Dluh Svobody</div>
+    </div>
+  </div>
+
+  <!-- Mikrofon -->
+  <div class="mic-section">
+    <button class="mic-btn" id="micBtn" onclick="toggleListening()">🎙️</button>
+    <div class="mic-label" id="micLabel">Klikni pro nahrávání</div>
+    <div class="waveform-wrap" id="waveformWrap">
+      <!-- bary se generují JS -->
+    </div>
+    <div class="vol-meter" id="volMeter"><div class="vol-fill" id="volFill"></div></div>
+    <div class="vol-label" id="volLabel">Hlasitost mikrofonu</div>
+  </div>
+
+  <!-- Přepis -->
+  <div class="transcript-box">
+    <div class="transcript-icon">🗣</div>
+    <div class="transcript-text" id="transcriptText">Zde se zobrazí přepis hlasu...</div>
+  </div>
+
+  <!-- Výsledek AI -->
+  <div class="result-card" id="resultCard">
+    <div class="result-header">
+      <div class="spinner" id="resultSpinner"></div>
+      <span id="resultHeaderText">Zpracovávám...</span>
+    </div>
+    <div class="result-body" id="resultBody"></div>
+  </div>
+
+  <!-- Log akcí -->
+  <div class="context-section log-section" id="logSection" style="display:none">
+    <div class="context-title">📜 Historie příkazů</div>
+    <div id="logEntries"></div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── Data ───────────────────────────────────────────────────────────────────
+const appState = {
+  season: 'Jaro 2025',
+  fee: 500,
+  players: [
+    { id: 1, name: 'Novák Jan',        paid: false, amount: 0 },
+    { id: 2, name: 'Procházka Tomáš',  paid: true,  amount: 500 },
+    { id: 3, name: 'Svoboda Martin',   paid: false, amount: 200 },
+    { id: 4, name: 'Dvořák Pavel',     paid: true,  amount: 500 },
+    { id: 5, name: 'Krejčí Lukáš',    paid: false, amount: 0 },
+    { id: 6, name: 'Beneš Ondřej',    paid: true,  amount: 500 },
+  ]
+};
+
+let apiKey = '';
+let recognition = null;
+let isListening = false;
+
+// Audio visualizer
+let audioCtx = null, analyser = null, micStream = null, animFrame = null;
+const BAR_COUNT = 28;
+
+function initWaveform() {
+  const wrap = document.getElementById('waveformWrap');
+  wrap.innerHTML = '';
+  for (let i = 0; i < BAR_COUNT; i++) {
+    const b = document.createElement('div');
+    b.className = 'waveform-bar';
+    wrap.appendChild(b);
+  }
+}
+
+async function startAudioVisualizer() {
+  document.getElementById('waveformWrap').classList.add('active');
+  document.getElementById('volLabel').classList.add('active');
+
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 64;
+    const src = audioCtx.createMediaStreamSource(micStream);
+    src.connect(analyser);
+    document.getElementById('volMeter').classList.add('active');
+    document.getElementById('volLabel').textContent = '🎙️ Mikrofon aktivní — mluv...';
+    drawWaveform();
+  } catch(e) {
+    // Fallback: Speech API funguje sama, vizualizér použije CSS animaci
+    document.getElementById('volLabel').textContent = '🎙️ Mikrofon aktivní — mluv a uvidíš přepis níže';
+    startFakeWaveform();
+  }
+}
+
+function drawWaveform() {
+  const data = new Uint8Array(analyser.frequencyBinCount);
+  const bars = document.querySelectorAll('.waveform-bar');
+
+  function loop() {
+    animFrame = requestAnimationFrame(loop);
+    analyser.getByteFrequencyData(data);
+
+    // Průměrná hlasitost pro meter
+    const avg = data.reduce((a, b) => a + b, 0) / data.length;
+    const pct = Math.min(100, (avg / 128) * 100);
+    document.getElementById('volFill').style.width = pct + '%';
+
+    // Feedback text
+    const label = document.getElementById('volLabel');
+    if (avg < 5)       label.textContent = '🔇 Neslyšíme tě — mluv hlasitěji';
+    else if (avg < 20) label.textContent = '🔉 Slyšíme tě slabě';
+    else if (avg < 60) label.textContent = '🔊 Slyšíme tě dobře';
+    else               label.textContent = '📢 Příliš hlasitě';
+
+    // Bary
+    const step = Math.floor(data.length / BAR_COUNT);
+    bars.forEach((bar, i) => {
+      const val = data[i * step] || 0;
+      const h = 4 + (val / 255) * 44;
+      bar.style.height = h + 'px';
+      bar.style.opacity = 0.4 + (val / 255) * 0.6;
+    });
+  }
+  loop();
+}
+
+function startFakeWaveform() {
+  // CSS-only animovaná náhrada když getUserMedia není povolené
+  const bars = document.querySelectorAll('.waveform-bar');
+  function animate() {
+    animFrame = requestAnimationFrame(animate);
+    bars.forEach((bar, i) => {
+      const h = 4 + Math.abs(Math.sin(Date.now() / 300 + i * 0.5)) * 30 + Math.random() * 8;
+      bar.style.height = h + 'px';
+      bar.style.opacity = 0.5 + Math.random() * 0.5;
+    });
+  }
+  animate();
+}
+
+function stopAudioVisualizer() {
+  if (animFrame) cancelAnimationFrame(animFrame);
+  if (micStream) micStream.getTracks().forEach(t => t.stop());
+  if (audioCtx) audioCtx.close();
+  audioCtx = analyser = micStream = null;
+  document.getElementById('waveformWrap').classList.remove('active');
+  document.getElementById('volMeter').classList.remove('active');
+  document.getElementById('volLabel').classList.remove('active');
+  const bars = document.querySelectorAll('.waveform-bar');
+  bars.forEach(b => { b.style.height = '4px'; });
+}
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+function init() {
+  renderPlayers();
+  setupSpeech();
+  initWaveform();
+}
+
+function renderPlayers() {
+  const el = document.getElementById('playersList');
+  el.innerHTML = appState.players.map(p => `
+    <div class="player-chip">
+      <div class="status-dot ${p.paid ? 'paid' : 'unpaid'}"></div>
+      ${p.name}
+    </div>
+  `).join('');
+}
+
+function saveApiKey() {
+  const val = document.getElementById('apiKeyInput').value.trim();
+  if (val.startsWith('sk-ant-')) {
+    apiKey = val;
+    document.getElementById('apiDot').className = 'dot green';
+    document.getElementById('apiStatusText').textContent = 'API klíč nastaven — Claude bude odpovídat živě';
+    showToast('✅ API klíč uložen', 'success');
+  } else {
+    document.getElementById('apiDot').className = 'dot red';
+    document.getElementById('apiStatusText').textContent = 'Neplatný klíč — zkontroluj formát sk-ant-...';
+    showToast('❌ Neplatný formát klíče', 'error');
+  }
+}
+
+// ─── Speech ──────────────────────────────────────────────────────────────────
+function setupSpeech() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    document.getElementById('micLabel').textContent = 'Mikrofon není podporován v tomto prohlížeči';
+    document.getElementById('micBtn').disabled = true;
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.lang = 'cs-CZ';
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+
+  recognition.onresult = (e) => {
+    let interim = '', final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    const text = final || interim;
+    setTranscript(text, !!final);
+    if (final) processCommand(final);
+  };
+  recognition.onend = () => { if (isListening) stopListening(); };
+  recognition.onerror = (e) => {
+    stopListening();
+    const msgs = {
+      'not-allowed':   '🚫 Přístup k mikrofonu zamítnut — povol ho v nastavení prohlížeče',
+      'no-speech':     null, // ignorovat
+      'network':       '🌐 Chyba sítě — Speech API potřebuje internet',
+      'audio-capture': '🎙️ Mikrofon nenalezen — zkontroluj připojení',
+      'aborted':       null,
+    };
+    const msg = msgs[e.error];
+    if (msg) showToast(msg, 'error');
+  };
+}
+
+function toggleListening() {
+  if (isListening) stopListening();
+  else startListening();
+}
+
+function startListening() {
+  if (!recognition) return;
+  isListening = true;
+  recognition.start();
+  startAudioVisualizer();
+  document.getElementById('micBtn').className = 'mic-btn listening';
+  document.getElementById('micLabel').textContent = 'Poslouchám...';
+  document.getElementById('micLabel').className = 'mic-label active';
+  setTranscript('', false);
+}
+
+function stopListening() {
+  isListening = false;
+  if (recognition) recognition.stop();
+  stopAudioVisualizer();
+  document.getElementById('micBtn').className = 'mic-btn';
+  document.getElementById('micLabel').textContent = 'Klikni pro nahrávání';
+  document.getElementById('micLabel').className = 'mic-label';
+}
+
+function setTranscript(text, isFinal) {
+  const el = document.getElementById('transcriptText');
+  el.textContent = text || 'Zde se zobrazí přepis hlasu...';
+  el.className = 'transcript-text' + (text ? ' has-text' : '');
+}
+
+function simulateVoice(text) {
+  setTranscript(text, true);
+  processCommand(text);
+}
+
+// ─── AI Processing ───────────────────────────────────────────────────────────
+async function processCommand(text) {
+  stopAudioVisualizer();
+  showResultLoading();
+  document.getElementById('micBtn').className = 'mic-btn processing';
+  document.getElementById('micBtn').disabled = true;
+  document.getElementById('micLabel').textContent = 'Zpracovávám...';
+  document.getElementById('micLabel').className = 'mic-label processing';
+
+  try {
+    let result;
+    if (apiKey) {
+      result = await callClaude(text);
+    } else {
+      result = await simulateClaude(text);
+    }
+    showResult(result, text);
+  } catch(e) {
+    showToast('Chyba: ' + e.message, 'error');
+    hideResult();
+  } finally {
+    document.getElementById('micBtn').disabled = false;
+    document.getElementById('micBtn').className = 'mic-btn';
+    document.getElementById('micLabel').textContent = 'Klikni pro nahrávání';
+    document.getElementById('micLabel').className = 'mic-label';
+  }
+}
+
+function buildSystemPrompt() {
+  const playerNames = appState.players.map(p =>
+    `- ${p.name} (${p.paid ? 'zaplaceno' : 'nezaplaceno'}, uhrazeno: ${p.amount} Kč)`
+  ).join('\n');
+
+  return `Jsi asistent správy hokejbalového týmu. Tvým úkolem je analyzovat hlasový příkaz trenéra/správce a vrátit POUZE JSON.
+
+Aktuální data:
+Sezóna: ${appState.season}
+Poplatek: ${appState.fee} Kč
+Hráči:
+${playerNames}
+
+Dostupné akce (intent):
+- "markUnpaid" — označit hráče jako nezaplaceného
+- "recordPayment" — zaznamenat platbu hráče
+- "viewDebt" — zobrazit dlužníky
+- "viewPlayer" — zobrazit detail hráče
+- "addPlayer" — přidat nového hráče
+- "unknown" — příkaz nerozpoznán
+
+Vrať POUZE validní JSON bez Markdown:
+{
+  "intent": "recordPayment",
+  "player": "Novák Jan",
+  "playerMatched": true,
+  "season": "Jaro 2025",
+  "amount": 500,
+  "confidence": 0.92,
+  "summary": "Krátký popis co se provede",
+  "confirmationNeeded": false
+}
+
+Pravidla:
+- Hledej nejbližší shodu jménem hráče (příjmení nebo jméno)
+- playerMatched = true pokud hráče najdeš v seznamu
+- confirmationNeeded = true pokud příkaz je destruktivní nebo nejasný
+- Pokud hráče nenajdeš, playerMatched = false a player = null
+- confidence je číslo 0-1`;
+}
+
+async function callClaude(text) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 400,
+      system: buildSystemPrompt(),
+      messages: [{ role: 'user', content: text }]
+    })
+  });
+  if (!res.ok) throw new Error(`API error ${res.status}`);
+  const data = await res.json();
+  const raw = data.content.map(b => b.text || '').join('');
+  const clean = raw.replace(/```json|```/g, '').trim();
+  return JSON.parse(clean);
+}
+
+// Simulace pro demo bez API klíče
+async function simulateClaude(text) {
+  await new Promise(r => setTimeout(r, 900));
+  const t = text.toLowerCase();
+  const matched = appState.players.find(p =>
+    p.name.toLowerCase().split(' ').some(part => t.includes(part.toLowerCase()))
+  );
+  if (t.includes('dluh') || t.includes('nezaplat') || (t.includes('kdo') && t.includes('neuhradil'))) {
+    return { intent: 'viewDebt', player: null, playerMatched: false, season: appState.season, amount: null, confidence: 0.91, summary: `Zobrazit všechny hráče s dluhem v sezóně ${appState.season}`, confirmationNeeded: false };
+  }
+  if (t.includes('přidej') || t.includes('nový hráč')) {
+    const nameParts = text.match(/hráče?\s+([A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ][a-záčďéěíňóřšťůúýž]+(?:\s+[A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ][a-záčďéěíňóřšťůúýž]+)?)/i);
+    return { intent: 'addPlayer', player: nameParts ? nameParts[1] : null, playerMatched: false, season: appState.season, amount: null, confidence: 0.88, summary: `Přidat nového hráče ${nameParts ? nameParts[1] : '?'} do aplikace`, confirmationNeeded: true };
+  }
+  if (matched) {
+    const isPay = t.includes('plat') || t.includes('zaplatil') || t.includes('uhradil');
+    const isUnpay = t.includes('nezaplatil') || t.includes('neuhradil') || t.includes('dluh') || t.includes('nezapl');
+    const amountMatch = text.match(/(\d+)\s*(?:korun|kč|Kč)?/i);
+    if (isUnpay) return { intent: 'markUnpaid', player: matched.name, playerMatched: true, season: appState.season, amount: null, confidence: 0.94, summary: `Označit ${matched.name} jako nezaplaceného v ${appState.season}`, confirmationNeeded: false };
+    if (isPay) return { intent: 'recordPayment', player: matched.name, playerMatched: true, season: appState.season, amount: amountMatch ? parseInt(amountMatch[1]) : appState.fee, confidence: 0.95, summary: `Zaznamenat platbu ${amountMatch ? amountMatch[1] : appState.fee} Kč od ${matched.name}`, confirmationNeeded: false };
+    return { intent: 'viewPlayer', player: matched.name, playerMatched: true, season: appState.season, amount: null, confidence: 0.87, summary: `Zobrazit detail hráče ${matched.name}`, confirmationNeeded: false };
+  }
+  return { intent: 'unknown', player: null, playerMatched: false, season: null, amount: null, confidence: 0.2, summary: 'Příkaz nebyl rozpoznán', confirmationNeeded: false };
+}
+
+// ─── UI ──────────────────────────────────────────────────────────────────────
+const intentMeta = {
+  markUnpaid:      { icon: '❌', label: 'Označit jako nezaplaceno', cls: 'unknown' },
+  recordPayment:   { icon: '✅', label: 'Zaznamenat platbu', cls: 'payment' },
+  viewDebt:        { icon: '👁', label: 'Zobrazit dlužníky', cls: 'view' },
+  viewPlayer:      { icon: '📋', label: 'Detail hráče', cls: 'view' },
+  addPlayer:       { icon: '➕', label: 'Přidat hráče', cls: 'add' },
+  unknown:         { icon: '❓', label: 'Nerozpoznáno', cls: 'unknown' },
+};
+
+function showResultLoading() {
+  const card = document.getElementById('resultCard');
+  card.classList.add('visible');
+  document.getElementById('resultSpinner').style.display = 'inline-block';
+  document.getElementById('resultHeaderText').textContent = 'Analyzuji příkaz...';
+  document.getElementById('resultBody').innerHTML = '';
+}
+
+function hideResult() {
+  document.getElementById('resultCard').classList.remove('visible');
+}
+
+function showResult(r, originalText) {
+  document.getElementById('resultSpinner').style.display = 'none';
+  document.getElementById('resultHeaderText').textContent = 'Výsledek analýzy';
+
+  const meta = intentMeta[r.intent] || intentMeta.unknown;
+  const confPct = Math.round((r.confidence || 0) * 100);
+
+  let params = [];
+  if (r.player) params.push({ label: 'Hráč', value: r.player, matched: r.playerMatched });
+  if (r.season) params.push({ label: 'Sezóna', value: r.season, matched: true });
+  if (r.amount) params.push({ label: 'Částka', value: r.amount + ' Kč', matched: true });
+
+  const paramsHtml = params.map(p => `
+    <div class="param-item">
+      <div class="param-label">${p.label}</div>
+      <div class="param-value ${p.matched ? 'matched' : 'unmatched'}">${p.value}</div>
+    </div>
+  `).join('');
+
+  const actionBtn = r.intent !== 'unknown' ? `
+    <div class="btn-row">
+      <button class="action-btn" onclick="executeAction(${JSON.stringify(r).replace(/"/g,'&quot;')})">
+        ${meta.icon} ${r.confirmationNeeded ? 'Potvrdit a provést' : 'Provést akci'}
+      </button>
+      <button class="action-btn secondary" onclick="hideResult()">Zrušit</button>
+    </div>
+  ` : '';
+
+  document.getElementById('resultBody').innerHTML = `
+    <div class="intent-chip ${meta.cls}">${meta.icon} ${meta.label}</div>
+    <div style="font-size:13px; color:var(--muted); margin-bottom:14px; line-height:1.5">${r.summary}</div>
+    ${params.length ? `<div class="params-grid">${paramsHtml}</div>` : ''}
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px; color:var(--muted); margin-bottom:6px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px">Jistota AI</div>
+      <div style="display:flex; align-items:center; gap:10px">
+        <div class="confidence-bar" style="flex:1"><div class="confidence-fill" style="width:${confPct}%"></div></div>
+        <span style="font-size:13px; font-weight:600; color:var(--text)">${confPct}%</span>
+      </div>
+    </div>
+    ${actionBtn}
+  `;
+
+  addLog(originalText, r);
+}
+
+function executeAction(r) {
+  // Zde by aplikace provedla skutečnou akci se svými daty
+  if (r.intent === 'recordPayment' && r.playerMatched) {
+    const p = appState.players.find(pl => pl.name === r.player);
+    if (p) { p.paid = true; p.amount = r.amount || appState.fee; renderPlayers(); }
+  } else if (r.intent === 'markUnpaid' && r.playerMatched) {
+    const p = appState.players.find(pl => pl.name === r.player);
+    if (p) { p.paid = false; p.amount = 0; renderPlayers(); }
+  }
+  showToast('✅ Akce provedena', 'success');
+  hideResult();
+}
+
+function addLog(text, r) {
+  const section = document.getElementById('logSection');
+  section.style.display = 'block';
+  const meta = intentMeta[r.intent] || intentMeta.unknown;
+  const now = new Date().toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' });
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.innerHTML = `
+    <div class="log-time">${now}</div>
+    <div class="log-msg">
+      ${meta.icon} <span class="hl">"${text}"</span> → ${r.summary}
+    </div>
+  `;
+  document.getElementById('logEntries').prepend(entry);
+}
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type;
+  void t.offsetWidth;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+init();
+</script>
+</body>
+</html>
