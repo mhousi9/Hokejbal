@@ -11,6 +11,11 @@
 <link id="apple-touch-icon" rel="apple-touch-icon" href="">
 <link id="pwa-manifest" rel="manifest">
 <title>Hokejbal</title>
+<script>
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{});
+}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
@@ -214,6 +219,11 @@ hr.divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
     </table>
     </div>
   </div>
+  <!-- DRESY PŘEHLED -->
+  <div class="card" style="margin-top:16px;">
+    <div class="card-title" style="margin-bottom:14px;">🎽 Dresy — přehled</div>
+    <div id="jerseys-summary"></div>
+  </div>
 </div>
 
 <!-- SEASON DETAIL -->
@@ -377,6 +387,34 @@ hr.divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
 </div>
 
 </main>
+
+<!-- MODAL: EDIT MATCH -->
+<div id="modal-edit-match" class="overlay" style="display:none;" onclick="if(event.target===this)closeModal('modal-edit-match')">
+  <div class="modal">
+    <div class="modal-title">Upravit zápas</div>
+    <input type="hidden" id="edit-match-id">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Číslo zápasu</label>
+        <input class="input" type="number" id="edit-match-number" min="1" style="width:80px;">
+      </div>
+      <div class="form-group" style="flex:2;">
+        <label class="form-label">Soupeř</label>
+        <input class="input" id="edit-match-team" placeholder="Název soupeře">
+      </div>
+    </div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin:12px 0 6px;">Hráči — přítomnost</div>
+    <div class="pclist" id="edit-match-players-list" style="max-height:380px;"></div>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button class="btn btn-secondary btn-sm" onclick="editMatchSelectAll()">✓ Všichni přítomni</button>
+      <button class="btn btn-ghost btn-sm" onclick="editMatchClear()">Vymazat vše</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-match')">Zrušit</button>
+      <button class="btn btn-primary" onclick="saveEditMatch()">Uložit zápas</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL: ADD MATCH -->
 <div id="modal-add-match" class="overlay" style="display:none;" onclick="if(event.target===this)closeModal('modal-add-match')">
@@ -798,6 +836,33 @@ function loadAll() {
 // ==================== UTILS ====================
 function uid() { return Math.random().toString(36).slice(2)+Date.now().toString(36); }
 function findPlayer(id) { return state.players.find(p=>p.id===id); }
+
+// Zobrazení čísla dresu — pokud nemá bílý, ukáže jen zelený
+function playerNumBadge(p) {
+  const w = p.numberWhite != null ? p.numberWhite : null;
+  const g = p.numberGreen != null ? p.numberGreen : null;
+  if (w != null && g != null && w !== g) return `<span style="color:#666;">🤍${w}</span> <span style="color:var(--green2);">💚${g}</span>`;
+  if (w != null) return `#${w}`;
+  if (g != null) return `<span style="color:var(--green2);">💚 #${g}</span>`;
+  if (p.number != null) return `#${p.number}`;
+  return '—';
+}
+function playerNumText(p) {
+  const w = p.numberWhite != null ? p.numberWhite : null;
+  const g = p.numberGreen != null ? p.numberGreen : null;
+  if (w != null && g != null && w !== g) return `🤍${w}/💚${g}`;
+  if (w != null) return `#${w}`;
+  if (g != null) return `💚#${g}`;
+  if (p.number != null) return `#${p.number}`;
+  return '';
+}
+// Pořadové číslo zápasu v sezóně
+function matchNum(mid, sid) {
+  const ms = getMatches(sid);
+  const idx = ms.findIndex(m => m.id === mid);
+  const m = ms[idx];
+  return m ? (m.number || idx + 1) : '?';
+}
 function findSeason(id) { return state.seasons.find(s=>s.id===id); }
 function getSD(sid) { return state.seasonData[sid] || {matches:[],fees:[]}; }
 function isNoFee(pid,sid) { return (getSD(sid).noFeePlayerIds||[]).includes(pid); }
@@ -889,7 +954,7 @@ function renderPlayersTable() {
   document.getElementById('players-tbody').innerHTML = players.map(p=>`
     <tr class="clk" onclick="openPlayer('${p.id}','players')">
       <td style="color:var(--dark);font-weight:600;">${p.name}</td>
-      <td>${p.numberWhite!=null?'#'+p.numberWhite:(p.number!=null?'#'+p.number:'—')}${p.numberGreen!=null&&p.numberGreen!==p.numberWhite?`<span style="color:var(--green);font-size:11px;"> / #${p.numberGreen}</span>`:''}</td>
+      <td>${playerNumBadge(p)}</td>
       <td><span style="font-size:12px;color:var(--muted);">${p.size||'—'}</span></td>
       <td><span style="font-size:12px;">${p.pos||'—'}</span></td>
       <td onclick="event.stopPropagation()" style="text-align:right;">
@@ -897,6 +962,62 @@ function renderPlayersTable() {
         <button class="btn btn-danger btn-sm" style="margin-left:5px;" onclick="deletePlayer('${p.id}')">🗑</button>
       </td>
     </tr>`).join('');
+  renderJerseySummary();
+}
+
+// Extra dresy (skladové zásoby) — oddělené od hráčů
+function getExtraJerseys() { return state.extraJerseys || {white:[], green:[]}; }
+function saveExtraJerseys(ej) { state.extraJerseys = ej; saveState(); }
+
+function renderJerseySummary() {
+  const el = document.getElementById('jerseys-summary');
+  if (!el) return;
+  const ej = getExtraJerseys();
+  const SIZES = ['XS','S','M','L','XL','2XL','3XL'];
+
+  const colHtml = (type, items) => {
+    const label = type==='white' ? '🤍 Bílé dresy' : '💚 Zelené dresy';
+    const accentCol = type==='white' ? '#94a3b8' : 'var(--green2)';
+    const rows = items.map((j,i) => `
+      <div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);">
+        <input class="input" type="number" min="0" max="99" placeholder="#" value="${j.number!=null?j.number:''}"
+          style="width:54px;padding:5px 8px;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;"
+          oninput="updateExtraJersey('${type}',${i},'number',this.value)">
+        <select class="input" style="flex:1;padding:5px 8px;" oninput="updateExtraJersey('${type}',${i},'size',this.value)">
+          <option value="">vel.—</option>
+          ${SIZES.map(s=>`<option value="${s}"${j.size===s?' selected':''}>${s}</option>`).join('')}
+        </select>
+        <button class="btn btn-danger btn-sm" style="padding:3px 8px;" onclick="removeExtraJersey('${type}',${i})">✕</button>
+      </div>`).join('');
+    return `<div style="flex:1;min-width:200px;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${accentCol};margin-bottom:8px;">${label}</div>
+      ${rows}
+      <button class="btn btn-secondary btn-sm" style="margin-top:8px;width:100%;justify-content:center;" onclick="addExtraJersey('${type}')">+ Přidat dres</button>
+    </div>`;
+  };
+
+  el.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:24px;">
+    ${colHtml('white', ej.white)}
+    ${colHtml('green', ej.green)}
+  </div>`;
+}
+
+function addExtraJersey(type) {
+  const ej = getExtraJerseys();
+  ej[type].push({number:null, size:''});
+  saveExtraJerseys(ej);
+  renderJerseySummary();
+}
+function removeExtraJersey(type, idx) {
+  const ej = getExtraJerseys();
+  ej[type].splice(idx, 1);
+  saveExtraJerseys(ej);
+  renderJerseySummary();
+}
+function updateExtraJersey(type, idx, field, val) {
+  const ej = getExtraJerseys();
+  ej[type][idx][field] = field==='number' ? (val===''?null:Number(val)) : val;
+  saveExtraJerseys(ej);
 }
 
 function addPlayer() {
@@ -970,11 +1091,13 @@ function renderSeasonPage() {
   const matches = getMatches(currentSeasonId);
   const ml = document.getElementById('matches-list');
   if (matches.length===0) { ml.innerHTML='<span style="color:var(--muted);font-size:14px;">Zatím žádné zápasy</span>'; }
-  else ml.innerHTML = matches.map(m=>`
+  else ml.innerHTML = matches.map((m,i)=>`
     <div style="display:inline-flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 12px;cursor:pointer;" onclick="showMatchDetail('${m.id}')">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;color:var(--muted);min-width:22px;">#${m.number||i+1}</span>
       <span style="font-weight:600;color:var(--dark);">${m.team}</span>
       <span style="color:var(--green);font-size:12px;">✓ ${(m.playerIds||[]).length}</span>
       <span style="color:var(--red);font-size:12px;">✗ ${(m.absentIds||[]).length}</span>
+      <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:11px;" onclick="event.stopPropagation();openEditMatch('${m.id}')">✏️</button>
       <button class="btn btn-danger btn-sm" style="padding:2px 6px;" onclick="event.stopPropagation();deleteMatch('${m.id}')">✕</button>
     </div>`).join('');
   renderSeasonTable();
@@ -991,7 +1114,7 @@ function showMatchDetail(mid) {
   const absent = absentIds.map(id=>findPlayer(id)).filter(Boolean);
   const neutral = state.players.filter(p=>!presentIds.includes(p.id)&&!absentIds.includes(p.id));
 
-  document.getElementById('match-detail-title').textContent = `vs. ${m.team}`;
+  document.getElementById('match-detail-title').textContent = `#${matchNum(mid, currentSeasonId)} vs. ${m.team}`;
   document.getElementById('match-detail-counts').innerHTML =
     `<span style="color:var(--green);font-weight:700;">✓ ${present.length} přítomných</span>
      <span style="color:var(--red);font-weight:700;margin-left:12px;">✗ ${absent.length} chybí</span>`;
@@ -1004,7 +1127,7 @@ function showMatchDetail(mid) {
     return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;background:${col};border:1px solid ${border};margin-bottom:4px;">
       <span style="font-size:14px;font-weight:700;color:${icol};width:14px;text-align:center;">${icon}</span>
       <span style="flex:1;font-size:14px;font-weight:600;">${p.name}</span>
-      <span style="font-size:12px;color:var(--muted);">${p.number!=null?'#'+p.number:''}</span>
+      <span style="font-size:12px;color:var(--muted);">${playerNumText(p)}</span>
     </div>`;
   };
 
@@ -1077,7 +1200,7 @@ function renderSeasonTable() {
     return `<tr class="clk" onclick="openPlayer('${r.p.id}','season')">
       <td style="${rankStyle}">${i+1}</td>
       <td style="font-weight:600;color:var(--dark);">${debtEmoji ? `<span style="margin-right:4px;">${debtEmoji}</span>` : ''}${r.p.name}${debtLabel}</td>
-      <td>${r.p.number!=null?'#'+r.p.number:'—'}</td>
+      <td>${playerNumBadge(r.p)}</td>
       <td><span style="color:var(--red);font-weight:700;">${r.games}</span><span style="color:var(--muted);font-size:12px;">/${matches.length}</span></td>
       <td>${feeHtml}</td>
       <td onclick="event.stopPropagation()">${stateHtml}</td>
@@ -1126,10 +1249,10 @@ function deleteMatch(mid) {
 function renderPlayerPage() {
   const p=findPlayer(currentPlayerId);
   if (!p) return;
-  document.getElementById('player-avatar').textContent=p.number!=null?('#'+p.number):'?';
+  document.getElementById('player-avatar').textContent = p.numberWhite!=null ? ('#'+p.numberWhite) : (p.numberGreen!=null ? ('#'+p.numberGreen) : (p.number!=null?('#'+p.number):'?'));
   document.getElementById('player-detail-name').textContent=p.name;
-  const nwTxt = p.numberWhite!=null?`🤍 #${p.numberWhite}`:(p.number!=null?`#${p.number}`:'');
-  const ngTxt = p.numberGreen!=null?`💚 #${p.numberGreen}`:'';
+  const nwTxt = p.numberWhite!=null?`🤍 #${p.numberWhite}`:'';
+  const ngTxt = p.numberGreen!=null?`💚 #${p.numberGreen}`:(!nwTxt&&p.number!=null?`#${p.number}`:'');
   const sizeTxt = p.size?`📐 ${p.size}`:'';
   var _posIco={'t':String.fromCodePoint(9876,65039),'b':String.fromCodePoint(128737,65039),'r':String.fromCodePoint(127941)};
   const posTxt = p.pos?(_posIco[p.pos[1]]||'')+' '+p.pos:'';
@@ -1217,7 +1340,7 @@ function renderPlayerPage() {
       ${feeBlock}
       ${itemsBlock}
       ${hasMoves ? `<hr class="divider" style="margin:10px 0 8px;">
-      <div>${present.map(m=>`<div class="match-pill mp-present">✓ ${m.team}</div>`).join('')}${absent.map(m=>`<div class="match-pill mp-absent">✗ ${m.team}</div>`).join('')}</div>` : ''}
+      <div>${present.map(m=>`<div class="match-pill mp-present">✓ #${matchNum(m.id,season.id)} ${m.team}</div>`).join('')}${absent.map(m=>`<div class="match-pill mp-absent">✗ #${matchNum(m.id,season.id)} ${m.team}</div>`).join('')}</div>` : ''}
     </div>`;
   });
 
@@ -1233,6 +1356,92 @@ function renderPlayerPage() {
   document.getElementById('player-seasons-list').innerHTML=html||'<div class="card" style="color:var(--muted);">Žádná data pro tohoto hráče.</div>';
 }
 
+// ==================== EDIT MATCH ====================
+let editMatchPresence = {};
+
+function openEditMatch(mid) {
+  const matches = getMatches(currentSeasonId);
+  const m = matches.find(x => x.id === mid);
+  if (!m) return;
+
+  editMatchPresence = {};
+  (m.playerIds || []).forEach(id => { editMatchPresence[id] = 'present'; });
+  (m.absentIds || []).forEach(id => { editMatchPresence[id] = 'absent'; });
+
+  document.getElementById('edit-match-id').value = mid;
+  document.getElementById('edit-match-team').value = m.team;
+  document.getElementById('edit-match-number').value = m.number || (matches.indexOf(m) + 1);
+
+  const excluded = getSD(currentSeasonId).excludedPlayerIds || [];
+  const sorted = [...state.players].filter(p => !excluded.includes(p.id)).sort((a,b) => a.name.localeCompare(b.name));
+
+  document.getElementById('edit-match-players-list').innerHTML = sorted.map(p => {
+    const s = editMatchPresence[p.id];
+    return `<div class="pcitem${s==='present'?' cp':s==='absent'?' ca':''}" id="epc-${p.id}">
+      <div class="chkbox${s==='present'?' p':''}" id="echkp-${p.id}" onclick="toggleEditPresence('${p.id}','present')" title="Přítomen">${s==='present'?'✓':''}</div>
+      <div class="chkbox${s==='absent'?' a':''}" id="echka-${p.id}" onclick="toggleEditPresence('${p.id}','absent')" title="Chybí">${s==='absent'?'✕':''}</div>
+      <span style="flex:1;font-size:14px;">${p.name}</span>
+      <span style="color:var(--muted);font-size:12px;">${playerNumText(p)}</span>
+    </div>`;
+  }).join('');
+
+  openModal('modal-edit-match');
+}
+
+function toggleEditPresence(pid, status) {
+  editMatchPresence[pid] = editMatchPresence[pid] === status ? undefined : status;
+  const s = editMatchPresence[pid];
+  document.getElementById('epc-'+pid).className = 'pcitem'+(s==='present'?' cp':s==='absent'?' ca':'');
+  const cp = document.getElementById('echkp-'+pid);
+  const ca = document.getElementById('echka-'+pid);
+  cp.className = 'chkbox'+(s==='present'?' p':''); cp.textContent = s==='present'?'✓':'';
+  ca.className = 'chkbox'+(s==='absent'?' a':''); ca.textContent = s==='absent'?'✕':'';
+}
+
+function editMatchSelectAll() {
+  const excluded = getSD(currentSeasonId).excludedPlayerIds || [];
+  state.players.filter(p => !excluded.includes(p.id)).forEach(p => {
+    editMatchPresence[p.id] = 'present';
+    const s = 'present';
+    document.getElementById('epc-'+p.id).className = 'pcitem cp';
+    const cp = document.getElementById('echkp-'+p.id);
+    const ca = document.getElementById('echka-'+p.id);
+    cp.className = 'chkbox p'; cp.textContent = '✓';
+    ca.className = 'chkbox'; ca.textContent = '';
+  });
+}
+
+function editMatchClear() {
+  const excluded = getSD(currentSeasonId).excludedPlayerIds || [];
+  state.players.filter(p => !excluded.includes(p.id)).forEach(p => {
+    editMatchPresence[p.id] = undefined;
+    document.getElementById('epc-'+p.id).className = 'pcitem';
+    const cp = document.getElementById('echkp-'+p.id);
+    const ca = document.getElementById('echka-'+p.id);
+    cp.className = 'chkbox'; cp.textContent = '';
+    ca.className = 'chkbox'; ca.textContent = '';
+  });
+}
+
+function saveEditMatch() {
+  const mid = document.getElementById('edit-match-id').value;
+  const team = document.getElementById('edit-match-team').value.trim();
+  const num = parseInt(document.getElementById('edit-match-number').value);
+  if (!team) return;
+  const sd = getSD(currentSeasonId);
+  sd.matches = sd.matches.map(m => {
+    if (m.id !== mid) return m;
+    return {...m, team, number: num || m.number,
+      playerIds: state.players.filter(p => editMatchPresence[p.id] === 'present').map(p => p.id),
+      absentIds:  state.players.filter(p => editMatchPresence[p.id] === 'absent').map(p => p.id)
+    };
+  });
+  state.seasonData[currentSeasonId] = sd;
+  saveState();
+  closeModal('modal-edit-match');
+  renderSeasonPage();
+}
+
 // ==================== ADD MATCH ====================
 function openAddMatch() {
   matchPresence={};
@@ -1243,7 +1452,7 @@ function openAddMatch() {
       <div class="chkbox" id="chkp-${p.id}" onclick="togglePresence('${p.id}','present')" title="Byl"></div>
       <div class="chkbox" id="chka-${p.id}" onclick="togglePresence('${p.id}','absent')" title="Nebyl"></div>
       <span style="flex:1;font-size:14px;">${p.name}</span>
-      <span style="color:var(--muted);font-size:12px;">${p.number!=null?'#'+p.number:''}</span>
+      <span style="color:var(--muted);font-size:12px;">${playerNumText(p)}</span>
     </div>`).join('');
   openModal('modal-add-match');
 }
@@ -1281,7 +1490,7 @@ function saveMatch() {
   if (!team) return;
   const sd=getSD(currentSeasonId);
   if(!sd.matches) sd.matches=[];
-  sd.matches.push({id:uid(),team,
+  sd.matches.push({id:uid(), team, number: sd.matches.length+1,
     playerIds:state.players.filter(p=>matchPresence[p.id]==='present').map(p=>p.id),
     absentIds:state.players.filter(p=>matchPresence[p.id]==='absent').map(p=>p.id)
   });
@@ -1500,7 +1709,7 @@ function renderBulkList(players) {
     return `<div class="pcitem ${sel?'cp':''}" id="bpk-${p.id}" onclick="toggleBulk('${p.id}')">
       <div class="chkbox ${sel?'p':''}" id="bchk-${p.id}">${sel?'✓':''}</div>
       <span style="flex:1;font-size:14px;">${p.name}</span>
-      <span style="font-size:11px;color:var(--muted);">${p.number!=null?'#'+p.number:''}</span>
+      <span style="font-size:11px;color:var(--muted);">${playerNumText(p)}</span>
       ${existingFee?`<span class="badge badge-muted" style="font-size:10px;">má poplatek</span>`:''}
     </div>`;
   }).join('');
