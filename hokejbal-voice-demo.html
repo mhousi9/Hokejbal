@@ -587,6 +587,11 @@
   <div class="mic-section">
     <button class="mic-btn" id="micBtn" onclick="toggleListening()">🎙️</button>
     <div class="mic-label" id="micLabel">Klikni pro nahrávání</div>
+    <div style="margin-top:12px; display:flex; gap:8px; justify-content:center">
+      <button onclick="setLang('cs-CZ')" id="btnCs" style="padding:6px 14px; border-radius:20px; border:1px solid var(--border); background:var(--surface2); color:var(--muted); font-size:12px; cursor:pointer">🇨🇿 cs-CZ</button>
+      <button onclick="setLang('en-US')" id="btnEn" style="padding:6px 14px; border-radius:20px; border:1px solid var(--accent); background:rgba(232,67,58,0.1); color:var(--accent); font-size:12px; cursor:pointer; font-weight:600">🇺🇸 en-US (test)</button>
+      <button onclick="setLang('')"     id="btnAuto" style="padding:6px 14px; border-radius:20px; border:1px solid var(--border); background:var(--surface2); color:var(--muted); font-size:12px; cursor:pointer">auto</button>
+    </div>
     <div class="waveform-wrap" id="waveformWrap">
       <!-- bary se generují JS -->
     </div>
@@ -769,6 +774,25 @@ function saveApiKey() {
 // ─── Speech ──────────────────────────────────────────────────────────────────
 let accumulatedText = '';
 let restartTimer = null;
+let currentLang = 'en-US';
+
+function setLang(lang) {
+  currentLang = lang;
+  ['btnCs','btnEn','btnAuto'].forEach(id => {
+    document.getElementById(id).style.borderColor = 'var(--border)';
+    document.getElementById(id).style.color = 'var(--muted)';
+    document.getElementById(id).style.background = 'var(--surface2)';
+    document.getElementById(id).style.fontWeight = 'normal';
+  });
+  const map = {'cs-CZ':'btnCs','en-US':'btnEn','':'btnAuto'};
+  const btn = document.getElementById(map[lang] || 'btnAuto');
+  btn.style.borderColor = 'var(--accent)';
+  btn.style.color = 'var(--accent)';
+  btn.style.background = 'rgba(232,67,58,0.1)';
+  btn.style.fontWeight = '600';
+  dbg(`🌐 Jazyk nastaven: "${lang || 'auto'}"`, '#f7a238');
+  if (isListening) { stopListening(); startListening(); }
+}
 
 function setupSpeech() {
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -787,7 +811,7 @@ function dbg(msg, color) {
 function createRecognition() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const r = new SR();
-  r.lang = 'cs-CZ';
+  r.lang = currentLang;
   r.continuous = false;
   r.interimResults = true;
   r.maxAlternatives = 3;
