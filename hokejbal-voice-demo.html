@@ -110,7 +110,7 @@
   <div class="card" id="loaderCard">
     <div class="loader-inner">
       <div class="loader-title">🤖 Whisper — přepis hlasu offline</div>
-      <div class="loader-sub">Model běží přímo v prohlížeči.<br>První načtení stáhne ~40 MB, pak funguje bez internetu.</div>
+      <div class="loader-sub">Model běží přímo v prohlížeči.<br>První načtení stáhne ~150 MB (whisper-small), pak funguje z cache.</div>
       <button class="btn-load" id="btnLoad" onclick="loadModel()">⬇️ Načíst model</button>
       <div id="progressWrap" style="display:none; margin-top:20px">
         <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
@@ -215,7 +215,7 @@ window.loadModel = async function() {
   btn.disabled = true; btn.innerHTML = '⏳ Načítám...';
   document.getElementById('progressWrap').style.display = 'block';
   try {
-    transcriber = await pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny', {
+    transcriber = await pipeline('automatic-speech-recognition', 'Xenova/whisper-small', {
       progress_callback: (p) => {
         const pct = p.progress ? Math.round(p.progress) : 0;
         if (p.status === 'downloading' || p.status === 'progress') {
@@ -230,8 +230,8 @@ window.loadModel = async function() {
     });
     document.getElementById('loaderCard').innerHTML = `
       <div style="text-align:center;padding:4px 0">
-        <div style="color:var(--success);font-size:16px;font-weight:700">✅ Whisper načten!</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:6px">Běží lokálně · Čeština · Offline</div>
+        <div style="color:var(--success);font-size:16px;font-weight:700">✅ Whisper Small načten!</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px">Běží lokálně · Čeština · Offline · Vysoká přesnost</div>
       </div>`;
     document.getElementById('micBtn').disabled = false;
     document.getElementById('micLabel').textContent = 'Klepni pro nahrávání';
@@ -310,7 +310,16 @@ async function transcribeBlob(blob) {
     const ctx16k = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
     const decoded = await ctx16k.decodeAudioData(ab);
     const float32 = decoded.getChannelData(0);
-    const result = await transcriber(float32, { language: 'czech', task: 'transcribe' });
+    const result = await transcriber(float32, {
+      language: 'czech',
+      task: 'transcribe',
+      chunk_length_s: 30,
+      stride_length_s: 5,
+      // Nápověda modelu — zlepšuje přesnost pro krátké české věty
+      forced_decoder_ids: null,
+      suppress_tokens: [],
+      prompt_ids: null,
+    });
     const text = result.text.trim();
     if (text) {
       tx.textContent = text;
