@@ -110,7 +110,7 @@
   <div class="card" id="loaderCard">
     <div class="loader-inner">
       <div class="loader-title">🤖 Whisper — přepis hlasu offline</div>
-      <div class="loader-sub">Model běží přímo v prohlížeči.<br>První načtení stáhne ~150 MB (whisper-small), pak funguje z cache.</div>
+      <div class="loader-sub">Model běží přímo v prohlížeči.<br>První načtení stáhne ~80 MB (whisper-small kvantizovaný), pak funguje z cache.</div>
       <button class="btn-load" id="btnLoad" onclick="loadModel()">⬇️ Načíst model</button>
       <div id="progressWrap" style="display:none; margin-top:20px">
         <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
@@ -216,6 +216,7 @@ window.loadModel = async function() {
   document.getElementById('progressWrap').style.display = 'block';
   try {
     transcriber = await pipeline('automatic-speech-recognition', 'Xenova/whisper-small', {
+      quantized: true,
       progress_callback: (p) => {
         const pct = p.progress ? Math.round(p.progress) : 0;
         if (p.status === 'downloading' || p.status === 'progress') {
@@ -267,7 +268,7 @@ async function startRecording() {
       recSeconds++;
       const m = Math.floor(recSeconds/60), s = String(recSeconds%60).padStart(2,'0');
       document.getElementById('recTimer').textContent = m+':'+s;
-      if (recSeconds >= 30) stopRecording();
+      if (recSeconds >= 10) stopRecording();
     }, 1000);
     document.getElementById('micBtn').className = 'mic-btn recording';
     document.getElementById('micLabel').className = 'mic-label recording';
