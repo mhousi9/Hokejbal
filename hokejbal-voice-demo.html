@@ -764,41 +764,71 @@ function saveApiKey() {
 }
 
 // ─── Speech ──────────────────────────────────────────────────────────────────
+let accumulatedText = '';
+let restartTimer = null;
+
 function setupSpeech() {
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
     document.getElementById('micLabel').textContent = 'Mikrofon není podporován v tomto prohlížeči';
     document.getElementById('micBtn').disabled = true;
     return;
   }
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  recognition = new SR();
-  recognition.lang = 'cs-CZ';
-  recognition.interimResults = true;
-  recognition.maxAlternatives = 1;
+}
 
-  recognition.onresult = (e) => {
+function createRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const r = new SR();
+  r.lang = 'cs-CZ';
+  r.continuous = false;       // false je spolehlivější na mobilním Chrome
+  r.interimResults = true;
+  r.maxAlternatives = 3;      // více alternativ = lepší šance na shodu
+
+  r.onresult = (e) => {
     let interim = '', final = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
       if (e.results[i].isFinal) final += e.results[i][0].transcript;
       else interim += e.results[i][0].transcript;
     }
-    const text = final || interim;
-    setTranscript(text, !!final);
-    if (final) processCommand(final);
+    const display = accumulatedText + (final || interim);
+    setTranscript(display, !!final);
+    if (final) {
+      accumulatedText += final + ' ';
+      // Po 1.5s ticha považuj větu za dokončenou
+      clearTimeout(restartTimer);
+      restartTimer = setTimeout(() => {
+        if (isListening && accumulatedText.trim()) {
+          const cmd = accumulatedText.trim();
+          accumulatedText = '';
+          setTranscript(cmd, true);
+          processCommand(cmd);
+        }
+      }, 1500);
+    }
   };
-  recognition.onend = () => { if (isListening) stopListening(); };
-  recognition.onerror = (e) => {
-    stopListening();
+
+  r.onend = () => {
+    // Mobilní Chrome recognition samo ukončí po tichu — restartujeme
+    if (isListening) {
+      try { r.start(); } catch(e) { /* ignore */ }
+    }
+  };
+
+  r.onerror = (e) => {
     const msgs = {
       'not-allowed':   '🚫 Přístup k mikrofonu zamítnut — povol ho v nastavení prohlížeče',
-      'no-speech':     null, // ignorovat
+      'no-speech':     null,
       'network':       '🌐 Chyba sítě — Speech API potřebuje internet',
       'audio-capture': '🎙️ Mikrofon nenalezen — zkontroluj připojení',
       'aborted':       null,
     };
     const msg = msgs[e.error];
-    if (msg) showToast(msg, 'error');
+    if (msg) { showToast(msg, 'error'); stopListening(); }
+    // no-speech / aborted — jen restart
+    else if (isListening) {
+      try { setTimeout(() => { if (isListening) r.start(); }, 200); } catch(e) {}
+    }
   };
+  return r;
 }
 
 function toggleListening() {
@@ -807,19 +837,24 @@ function toggleListening() {
 }
 
 function startListening() {
-  if (!recognition) return;
+  accumulatedText = '';
+  clearTimeout(restartTimer);
   isListening = true;
+  recognition = createRecognition();
   recognition.start();
   startAudioVisualizer();
   document.getElementById('micBtn').className = 'mic-btn listening';
-  document.getElementById('micLabel').textContent = 'Poslouchám...';
+  document.getElementById('micLabel').textContent = 'Poslouchám — mluv česky...';
   document.getElementById('micLabel').className = 'mic-label active';
   setTranscript('', false);
 }
 
 function stopListening() {
   isListening = false;
-  if (recognition) recognition.stop();
+  clearTimeout(restartTimer);
+  if (recognition) { try { recognition.stop(); } catch(e) {} }
+  recognition = null;
+  accumulatedText = '';
   stopAudioVisualizer();
   document.getElementById('micBtn').className = 'mic-btn';
   document.getElementById('micLabel').textContent = 'Klikni pro nahrávání';
