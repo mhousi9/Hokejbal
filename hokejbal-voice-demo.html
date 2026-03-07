@@ -812,7 +812,7 @@ function createRecognition() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const r = new SR();
   r.lang = currentLang;
-  r.continuous = false;
+  r.continuous = true;   // jedna session, žádný restart = funguje na Android
   r.interimResults = true;
   r.maxAlternatives = 3;
 
@@ -825,10 +825,8 @@ function createRecognition() {
   r.onaudioend   = () => dbg('🎙 onaudioend', '#6b7280');
   r.onend        = () => {
     dbg('⏹ onend — recognition ukončena', '#6b7280');
-    if (isListening) {
-      dbg('↺ restartuji...', '#60a5fa');
-      try { setTimeout(() => { if (isListening) r.start(); }, 200); } catch(e) {}
-    }
+    // NERESTARTUJI — Android Chrome blokuje start() bez user gesture
+    if (isListening) stopListening();
   };
 
   r.onresult = (e) => {
@@ -858,15 +856,13 @@ function createRecognition() {
   r.onerror = (e) => {
     dbg(`❌ onerror: ${e.error}`, '#e8433a');
     const msgs = {
-      'not-allowed':   '🚫 Přístup k mikrofonu zamítnut — povol ho v nastavení prohlížeče',
+      'not-allowed':   '🚫 Přístup k mikrofonu zamítnut',
       'network':       '🌐 Chyba sítě — Speech API potřebuje internet',
       'audio-capture': '🎙️ Mikrofon nenalezen',
     };
     const msg = msgs[e.error];
-    if (msg) { showToast(msg, 'error'); stopListening(); }
-    else if (isListening) {
-      try { setTimeout(() => { if (isListening) r.start(); }, 300); } catch(e) {}
-    }
+    if (msg) showToast(msg, 'error');
+    if (isListening) stopListening();
   };
   return r;
 }
