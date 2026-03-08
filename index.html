@@ -1086,14 +1086,16 @@ function renderSeasonPage() {
   if (!season) return;
   document.getElementById('season-detail-title').textContent = season.name;
   const matches = getMatches(currentSeasonId);
+  const _excl = getSD(currentSeasonId).excludedPlayerIds || [];
+  const _seasonPlayerCount = state.players.filter(p => !_excl.includes(p.id)).length;
   const ml = document.getElementById('matches-list');
   if (matches.length===0) { ml.innerHTML='<span style="color:var(--muted);font-size:14px;">Zatím žádné zápasy</span>'; }
   else ml.innerHTML = matches.map((m,i)=>`
     <div style="display:inline-flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 12px;cursor:pointer;" onclick="showMatchDetail('${m.id}')">
       <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;color:var(--muted);min-width:22px;">#${m.number||i+1}</span>
       <span style="font-weight:600;color:var(--dark);">${m.team}</span>
-      <span style="color:var(--green);font-size:12px;">✓ ${(m.playerIds||[]).length}</span>
-      <span style="color:var(--red);font-size:12px;">✗ ${(m.absentIds||[]).length}</span>
+      <span style="color:var(--green);font-size:12px;">✓ ${(m.playerIds||[]).length}/${_seasonPlayerCount}</span>
+      <span style="color:var(--red);font-size:12px;">✗ ${(m.absentIds||[]).length}/${_seasonPlayerCount}</span>
       <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:11px;" onclick="event.stopPropagation();openEditMatch('${m.id}')">✏️</button>
       <button class="btn btn-danger btn-sm" style="padding:2px 6px;" onclick="event.stopPropagation();deleteMatch('${m.id}')">✕</button>
     </div>`).join('');
@@ -1112,9 +1114,11 @@ function showMatchDetail(mid) {
   const neutral = state.players.filter(p=>!presentIds.includes(p.id)&&!absentIds.includes(p.id));
 
   document.getElementById('match-detail-title').textContent = `#${matchNum(mid, currentSeasonId)} vs. ${m.team}`;
+  const _excl2 = getSD(currentSeasonId).excludedPlayerIds || [];
+  const _spc = state.players.filter(p => !_excl2.includes(p.id)).length;
   document.getElementById('match-detail-counts').innerHTML =
-    `<span style="color:var(--green);font-weight:700;">✓ ${present.length} přítomných</span>
-     <span style="color:var(--red);font-weight:700;margin-left:12px;">✗ ${absent.length} chybí</span>`;
+    `<span style="color:var(--green);font-weight:700;">✓ ${present.length}/${_spc} přítomných</span>
+     <span style="color:var(--red);font-weight:700;margin-left:12px;">✗ ${absent.length}/${_spc} chybí</span>`;
 
   const row = (p, type) => {
     const col = type==='p'?'var(--green-bg)':type==='a'?'var(--red-bg)':'var(--surface2)';
