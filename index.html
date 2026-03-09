@@ -210,7 +210,7 @@ hr.divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
   <div class="card" style="padding:0;overflow:hidden;">
     <div class="tbl-wrap">
     <table class="tbl">
-      <thead><tr><th style="width:36px;color:var(--muted);">#</th><th id="th-name" onclick="setPlayerSort('name')" style="cursor:pointer;">Jméno</th><th id="th-number" onclick="setPlayerSort('number')" style="cursor:pointer;"># Dres</th><th>Vel.</th><th>Post</th><th>Dluh</th><th></th></tr></thead>
+      <thead><tr><th style="width:36px;color:var(--muted);">#</th><th id="th-name" onclick="setPlayerSort('name')" style="cursor:pointer;">Jméno</th><th id="th-number" onclick="setPlayerSort('number')" style="cursor:pointer;"># Dres</th><th>Vel.</th><th>Post</th><th id="th-debt" onclick="setPlayerSort('debt')" style="cursor:pointer;">Dluh</th><th></th></tr></thead>
       <tbody id="players-tbody"></tbody>
     </table>
     </div>
@@ -244,7 +244,7 @@ hr.divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
     <div style="padding:14px 16px 0;">
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">
         <input class="input" style="flex:1;min-width:160px;" id="sd-filter" placeholder="Hledat..." oninput="renderSeasonTable()">
-        <button id="sd-debt-btn" class="btn btn-secondary btn-sm" onclick="toggleSeasonDebt()" style="white-space:nowrap;">💸 Největší dluh</button>
+        <button id="sd-debt-btn" class="btn btn-secondary btn-sm" onclick="toggleSeasonDebt()" style="white-space:nowrap;">Dluh</button>
       </div>
     </div>
     <div class="tbl-wrap">
@@ -954,8 +954,10 @@ function setPlayerSort(col) {
   playerSort = col;
   const tn = document.getElementById('th-name');
   const td = document.getElementById('th-number');
+  const tdt = document.getElementById('th-debt');
   if(tn) tn.style.fontWeight = col==='name'?'800':'600';
   if(td) td.style.fontWeight = col==='number'?'800':'600';
+  if(tdt) tdt.style.fontWeight = col==='debt'?'800':'600';
   renderPlayersTable();
 }
 function playerTotalDebt(pid) {
@@ -974,7 +976,11 @@ function renderPlayersTable() {
   const filter = (document.getElementById('player-filter')||{}).value||'';
   const sort = playerSort;
   let players = state.players.filter(p=>p.name.toLowerCase().includes(filter.toLowerCase()));
-  players.sort((a,b) => sort==='name' ? a.name.localeCompare(b.name) : (a.number||0)-(b.number||0));
+  if (sort === 'debt') {
+    players.sort((a,b) => playerTotalDebt(b.id) - playerTotalDebt(a.id));
+  } else {
+    players.sort((a,b) => sort==='name' ? a.name.localeCompare(b.name) : (a.number||0)-(b.number||0));
+  }
   document.getElementById('players-tbody').innerHTML = players.map((p,i)=>{
     const debt = playerTotalDebt(p.id);
     const debtHtml = debt > 0
@@ -1192,6 +1198,7 @@ function setSeasonSort(col) {
 }
 function toggleSeasonDebt() {
   seasonDebtOnly = !seasonDebtOnly;
+  if (seasonDebtOnly) seasonSort = 'debt'; else seasonSort = 'name';
   const btn = document.getElementById('sd-debt-btn');
   if(btn) { btn.style.background = seasonDebtOnly ? 'var(--red)' : ''; btn.style.color = seasonDebtOnly ? '#fff' : ''; }
   renderSeasonTable();
