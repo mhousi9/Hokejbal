@@ -210,7 +210,7 @@ hr.divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
   <div class="card" style="padding:0;overflow:hidden;">
     <div class="tbl-wrap">
     <table class="tbl">
-      <thead><tr><th style="width:36px;color:var(--muted);">#</th><th id="th-name" onclick="setPlayerSort('name')" style="cursor:pointer;">Jméno</th><th id="th-number" onclick="setPlayerSort('number')" style="cursor:pointer;"># Dres</th><th>Vel.</th><th>Post</th><th></th></tr></thead>
+      <thead><tr><th style="width:36px;color:var(--muted);">#</th><th id="th-name" onclick="setPlayerSort('name')" style="cursor:pointer;">Jméno</th><th id="th-number" onclick="setPlayerSort('number')" style="cursor:pointer;"># Dres</th><th>Vel.</th><th>Post</th><th>Dluh</th><th></th></tr></thead>
       <tbody id="players-tbody"></tbody>
     </table>
     </div>
@@ -958,23 +958,41 @@ function setPlayerSort(col) {
   if(td) td.style.fontWeight = col==='number'?'800':'600';
   renderPlayersTable();
 }
+function playerTotalDebt(pid) {
+  let debt = 0;
+  state.seasons.forEach(s => {
+    const fee = getFee(pid, s.id);
+    if (fee) debt += Math.max(0, fee.amount - fee.paid);
+    getPlayerItems(pid, s.id).forEach(item => {
+      debt += Math.max(0, item.amount - item.paid);
+    });
+  });
+  return debt;
+}
+
 function renderPlayersTable() {
   const filter = (document.getElementById('player-filter')||{}).value||'';
   const sort = playerSort;
   let players = state.players.filter(p=>p.name.toLowerCase().includes(filter.toLowerCase()));
   players.sort((a,b) => sort==='name' ? a.name.localeCompare(b.name) : (a.number||0)-(b.number||0));
-  document.getElementById('players-tbody').innerHTML = players.map((p,i)=>`
-    <tr class="clk" onclick="openPlayer('${p.id}','players')">
+  document.getElementById('players-tbody').innerHTML = players.map((p,i)=>{
+    const debt = playerTotalDebt(p.id);
+    const debtHtml = debt > 0
+      ? `<span style="color:var(--red2);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;">−${debt.toLocaleString('cs')} Kč</span>`
+      : ``;
+    return `<tr class="clk" onclick="openPlayer('${p.id}','players')">
       <td style="color:var(--muted);font-size:12px;font-family:'Barlow Condensed',sans-serif;">${i+1}</td>
       <td style="color:var(--dark);font-weight:600;">${p.name}</td>
       <td>${playerNumBadge(p)}</td>
       <td><span style="font-size:12px;color:var(--muted);">${p.size||'—'}</span></td>
       <td><span style="font-size:12px;">${p.pos||'—'}</span></td>
+      <td>${debtHtml}</td>
       <td onclick="event.stopPropagation()" style="text-align:right;">
         <button class="btn btn-ghost btn-sm" onclick="openEditPlayer('${p.id}')">✏️</button>
         <button class="btn btn-danger btn-sm" style="margin-left:5px;" onclick="deletePlayer('${p.id}')">🗑</button>
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
   renderJerseySummary();
 }
 
@@ -1138,7 +1156,7 @@ function showMatchDetail(mid) {
     const border = type==='p'?'#b8e8d0':type==='a'?'#f5c2c6':'var(--border)';
     const icon = type==='p'?'✓':type==='a'?'✗':'·';
     const icol = type==='p'?'var(--green2)':type==='a'?'var(--red2)':'var(--muted)';
-    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;background:${col};border:1px solid ${border};margin-bottom:4px;">
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;background:${col};border:1px solid ${border};margin-bottom:4px;cursor:pointer;" onclick="closeModal('modal-match-detail');openPlayer('${p.id}','season')">
       <span style="font-size:14px;font-weight:700;color:${icol};width:14px;text-align:center;">${icon}</span>
       <span style="flex:1;font-size:14px;font-weight:600;">${p.name}</span>
       <span style="font-size:12px;color:var(--muted);">${playerNumText(p)}</span>
@@ -1376,7 +1394,7 @@ function renderPlayerPage() {
       ${feeBlock}
       ${itemsBlock}
       ${hasMoves ? `<hr class="divider" style="margin:10px 0 8px;">
-      <div>${present.map(m=>`<div class="match-pill mp-present">✓ #${matchNum(m.id,season.id)} ${m.team}</div>`).join('')}${absent.map(m=>`<div class="match-pill mp-absent">✗ #${matchNum(m.id,season.id)} ${m.team}</div>`).join('')}</div>` : ''}
+      <div>${present.map(m=>`<div class="match-pill mp-present" style="cursor:pointer;" onclick="openMatchFromPlayer('${m.id}','${season.id}')">✓ #${matchNum(m.id,season.id)} ${m.team}</div>`).join('')}${absent.map(m=>`<div class="match-pill mp-absent" style="cursor:pointer;" onclick="openMatchFromPlayer('${m.id}','${season.id}')">✗ #${matchNum(m.id,season.id)} ${m.team}</div>`).join('')}</div>` : ''}
     </div>`;
   });
 
@@ -1390,6 +1408,11 @@ function renderPlayerPage() {
   </div>`;
 
   document.getElementById('player-seasons-list').innerHTML=html||'<div class="card" style="color:var(--muted);">Žádná data pro tohoto hráče.</div>';
+}
+
+function openMatchFromPlayer(mid, sid) {
+  currentSeasonId = sid;
+  showMatchDetail(mid);
 }
 
 // ==================== EDIT MATCH ====================
