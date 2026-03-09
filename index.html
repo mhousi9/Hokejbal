@@ -1458,16 +1458,33 @@ function editMatchClear() {
 function saveEditMatch() {
   const mid = document.getElementById('edit-match-id').value;
   const team = document.getElementById('edit-match-team').value.trim();
-  const num = parseInt(document.getElementById('edit-match-number').value);
+  const newNum = parseInt(document.getElementById('edit-match-number').value);
   if (!team) return;
   const sd = getSD(currentSeasonId);
+
+  if (newNum) {
+    // Zajistit, že všechny zápasy mají explicitní číslo
+    sd.matches = sd.matches.map((m, i) => ({...m, number: m.number || i + 1}));
+    // Posunout čísla ostatních zápasů >= newNum o 1 výše
+    sd.matches = sd.matches.map(m => {
+      if (m.id === mid) return m;
+      if (m.number >= newNum) return {...m, number: m.number + 1};
+      return m;
+    });
+  }
+
+  // Uložit upravený zápas s novým číslem a přítomností
   sd.matches = sd.matches.map(m => {
     if (m.id !== mid) return m;
-    return {...m, team, number: num || m.number,
+    return {...m, team, number: newNum || m.number,
       playerIds: state.players.filter(p => feeList(currentSeasonId).has(p.id) && editMatchPresence[p.id] === 'present').map(p => p.id),
       absentIds:  state.players.filter(p => feeList(currentSeasonId).has(p.id) && editMatchPresence[p.id] === 'absent').map(p => p.id)
     };
   });
+
+  // Seřadit zápasy podle čísla od nejnižšího
+  sd.matches.sort((a, b) => (a.number || 0) - (b.number || 0));
+
   state.seasonData[currentSeasonId] = sd;
   saveState();
   closeModal('modal-edit-match');
