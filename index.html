@@ -205,16 +205,12 @@ hr.divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
   <div class="page-title">Hráči</div>
   <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
     <input class="input" style="width:220px;" id="player-filter" placeholder="Hledat hráče..." oninput="renderPlayersTable()">
-    <select class="input" style="width:180px;" id="player-sort" onchange="renderPlayersTable()">
-      <option value="name">Řadit: Jméno</option>
-      <option value="number">Řadit: # Dres</option>
-    </select>
-    <button class="btn btn-primary" onclick="openModal('modal-add-player')">+ Přidat hráče</button>
+<button class="btn btn-primary" onclick="openModal('modal-add-player')">+ Přidat hráče</button>
   </div>
   <div class="card" style="padding:0;overflow:hidden;">
     <div class="tbl-wrap">
     <table class="tbl">
-      <thead><tr><th>Jméno</th><th># Dres</th><th>Vel.</th><th>Post</th><th></th></tr></thead>
+      <thead><tr><th style="width:36px;color:var(--muted);">#</th><th id="th-name" onclick="setPlayerSort('name')" style="cursor:pointer;">Jméno</th><th id="th-number" onclick="setPlayerSort('number')" style="cursor:pointer;"># Dres</th><th>Vel.</th><th>Post</th><th></th></tr></thead>
       <tbody id="players-tbody"></tbody>
     </table>
     </div>
@@ -232,7 +228,7 @@ hr.divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px;">
     <div class="page-title" id="season-detail-title" style="margin-bottom:0;"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <button class="btn btn-green btn-sm" onclick="openSeasonAddPlayer()">+ Přidat hráče</button>
+      <button class="btn btn-green btn-sm" onclick="openSeasonPickPlayers()">📋 Ze seznamu</button>
       <button class="btn btn-gold btn-sm" onclick="openBulkFee()">💰 Hromadný poplatek</button>
       <button class="btn btn-secondary btn-sm" onclick="openSeasonPaidSummary()">📊 Zaplaceno v sezóně</button>
     </div>
@@ -246,27 +242,16 @@ hr.divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
   </div>
   <div class="card" style="padding:0;overflow:hidden;">
     <div style="padding:14px 16px 0;">
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
-        <input class="input" style="width:200px;" id="sd-filter" placeholder="Hledat..." oninput="renderSeasonTable()">
-        <select class="input" style="width:170px;" id="sd-sort" onchange="renderSeasonTable()">
-          <option value="games">Nejvíce zápasů</option>
-          <option value="name">Jméno A–Z</option>
-          <option value="number">Číslo dresu</option>
-          <option value="paid">Zaplaceno</option>
-          <option value="debt">Největší dluh</option>
-        </select>
-        <select class="input" style="width:160px;" id="sd-paid" onchange="renderSeasonTable()">
-          <option value="all">Všichni</option>
-          <option value="paid">Zaplaceno</option>
-          <option value="unpaid">Nezaplaceno</option>
-        </select>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">
+        <input class="input" style="flex:1;min-width:160px;" id="sd-filter" placeholder="Hledat..." oninput="renderSeasonTable()">
+        <button id="sd-debt-btn" class="btn btn-secondary btn-sm" onclick="toggleSeasonDebt()" style="white-space:nowrap;">💸 Největší dluh</button>
       </div>
     </div>
     <div class="tbl-wrap">
     <table class="tbl">
       <thead><tr>
         <th style="width:36px;">#</th>
-        <th>Jméno</th><th>Dres</th><th>Zápasy</th><th>Finance</th><th>Stav</th><th></th>
+        <th id="sth-name" onclick="setSeasonSort('name')" style="cursor:pointer;">Jméno</th><th id="sth-number" onclick="setSeasonSort('number')" style="cursor:pointer;">Dres</th><th id="sth-games" onclick="setSeasonSort('games')" style="cursor:pointer;">Zápasy</th><th id="sth-finance" onclick="setSeasonSort('paid')" style="cursor:pointer;">Finance</th><th>Stav</th><th></th>
       </tr></thead>
       <tbody id="season-tbody"></tbody>
     </table>
@@ -468,11 +453,11 @@ hr.divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">🤍 Číslo (bílý dres)</label>
+        <label class="form-label">⬜ Číslo (bílý dres)</label>
         <input class="input" type="number" id="new-player-nw" placeholder="—">
       </div>
       <div class="form-group">
-        <label class="form-label">💚 Číslo (zelený dres)</label>
+        <label class="form-label">🟩 Číslo (zelený dres)</label>
         <input class="input" type="number" id="new-player-ng" placeholder="—">
       </div>
     </div>
@@ -518,11 +503,11 @@ hr.divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">🤍 Číslo (bílý dres)</label>
+        <label class="form-label">⬜ Číslo (bílý dres)</label>
         <input class="input" type="number" id="edit-player-nw" placeholder="—">
       </div>
       <div class="form-group">
-        <label class="form-label">💚 Číslo (zelený dres)</label>
+        <label class="form-label">🟩 Číslo (zelený dres)</label>
         <input class="input" type="number" id="edit-player-ng" placeholder="—">
       </div>
     </div>
@@ -651,6 +636,27 @@ hr.divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
   </div>
 </div>
 
+<!-- MODAL: PICK PLAYERS FROM LIST -->
+<div id="modal-season-pick-players" class="overlay" style="display:none;" onclick="if(event.target===this)closeModal('modal-season-pick-players')">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title">Přidat hráče do sezóny</div>
+    <div style="color:var(--muted);font-size:13px;margin-bottom:12px;" id="spp-sub"></div>
+    <input class="input" style="margin-bottom:10px;" id="spp-filter" placeholder="Hledat hráče..." oninput="renderSeasonPickList()">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);" id="spp-count"></span>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-ghost btn-sm" onclick="sppSelectAll()">Všichni</button>
+        <button class="btn btn-ghost btn-sm" onclick="sppSelectNone()">Žádný</button>
+      </div>
+    </div>
+    <div class="pclist" id="spp-list" style="max-height:320px;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-season-pick-players')">Zrušit</button>
+      <button class="btn btn-green" onclick="saveSeasonPick()">Přidat vybrané</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: ADD PLAYER TO SEASON -->
 <div id="modal-season-add-player" class="overlay" style="display:none;" onclick="if(event.target===this)closeModal('modal-season-add-player')">
   <div class="modal">
@@ -662,11 +668,11 @@ hr.divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">🤍 Číslo (bílý)</label>
+        <label class="form-label">⬜ Číslo (bílý)</label>
         <input class="input" type="number" id="sap-nw" placeholder="—">
       </div>
       <div class="form-group">
-        <label class="form-label">💚 Číslo (zelený)</label>
+        <label class="form-label">🟩 Číslo (zelený)</label>
         <input class="input" type="number" id="sap-ng" placeholder="—">
       </div>
     </div>
@@ -838,18 +844,18 @@ function findPlayer(id) { return state.players.find(p=>p.id===id); }
 function playerNumBadge(p) {
   const w = p.numberWhite != null ? p.numberWhite : null;
   const g = p.numberGreen != null ? p.numberGreen : null;
-  if (w != null && g != null && w !== g) return `<span style="color:#666;">🤍${w}</span> <span style="color:var(--green2);">💚${g}</span>`;
+  if (w != null && g != null && w !== g) return `<span style="color:#666;">⬜${w}</span> <span style="color:var(--green2);">🟩${g}</span>`;
   if (w != null) return `#${w}`;
-  if (g != null) return `<span style="color:var(--green2);">💚 #${g}</span>`;
+  if (g != null) return `<span style="color:var(--green2);">🟩 #${g}</span>`;
   if (p.number != null) return `#${p.number}`;
   return '—';
 }
 function playerNumText(p) {
   const w = p.numberWhite != null ? p.numberWhite : null;
   const g = p.numberGreen != null ? p.numberGreen : null;
-  if (w != null && g != null && w !== g) return `🤍${w}/💚${g}`;
+  if (w != null && g != null && w !== g) return `⬜${w}/🟩${g}`;
   if (w != null) return `#${w}`;
-  if (g != null) return `💚#${g}`;
+  if (g != null) return `🟩#${g}`;
   if (p.number != null) return `#${p.number}`;
   return '';
 }
@@ -943,13 +949,23 @@ function deleteSeason(sid) {
 }
 
 // ==================== PLAYERS ====================
+let playerSort = 'name';
+function setPlayerSort(col) {
+  playerSort = col;
+  const tn = document.getElementById('th-name');
+  const td = document.getElementById('th-number');
+  if(tn) tn.style.fontWeight = col==='name'?'800':'600';
+  if(td) td.style.fontWeight = col==='number'?'800':'600';
+  renderPlayersTable();
+}
 function renderPlayersTable() {
   const filter = (document.getElementById('player-filter')||{}).value||'';
-  const sort = (document.getElementById('player-sort')||{}).value||'name';
+  const sort = playerSort;
   let players = state.players.filter(p=>p.name.toLowerCase().includes(filter.toLowerCase()));
   players.sort((a,b) => sort==='name' ? a.name.localeCompare(b.name) : (a.number||0)-(b.number||0));
-  document.getElementById('players-tbody').innerHTML = players.map(p=>`
+  document.getElementById('players-tbody').innerHTML = players.map((p,i)=>`
     <tr class="clk" onclick="openPlayer('${p.id}','players')">
+      <td style="color:var(--muted);font-size:12px;font-family:'Barlow Condensed',sans-serif;">${i+1}</td>
       <td style="color:var(--dark);font-weight:600;">${p.name}</td>
       <td>${playerNumBadge(p)}</td>
       <td><span style="font-size:12px;color:var(--muted);">${p.size||'—'}</span></td>
@@ -973,7 +989,7 @@ function renderJerseySummary() {
   const SIZES = ['XS','S','M','L','XL','2XL','3XL'];
 
   const colHtml = (type, items) => {
-    const label = type==='white' ? '🤍 Bílé dresy' : '💚 Zelené dresy';
+    const label = type==='white' ? '⬜ Bílé dresy' : '🟩 Zelené dresy';
     const accentCol = type==='white' ? '#94a3b8' : 'var(--green2)';
     const rows = items.map((j,i) => `
       <div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);">
@@ -1086,16 +1102,14 @@ function renderSeasonPage() {
   if (!season) return;
   document.getElementById('season-detail-title').textContent = season.name;
   const matches = getMatches(currentSeasonId);
-  const _excl = getSD(currentSeasonId).excludedPlayerIds || [];
-  const _seasonPlayerCount = state.players.filter(p => !_excl.includes(p.id)).length;
   const ml = document.getElementById('matches-list');
   if (matches.length===0) { ml.innerHTML='<span style="color:var(--muted);font-size:14px;">Zatím žádné zápasy</span>'; }
   else ml.innerHTML = matches.map((m,i)=>`
     <div style="display:inline-flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 12px;cursor:pointer;" onclick="showMatchDetail('${m.id}')">
       <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;color:var(--muted);min-width:22px;">#${m.number||i+1}</span>
       <span style="font-weight:600;color:var(--dark);">${m.team}</span>
-      <span style="color:var(--green);font-size:12px;">✓ ${(m.playerIds||[]).length}/${_seasonPlayerCount}</span>
-      <span style="color:var(--red);font-size:12px;">✗ ${(m.absentIds||[]).length}/${_seasonPlayerCount}</span>
+      <span style="color:var(--green);font-size:12px;">${(()=>{const fl=feeList(currentSeasonId);const p=(m.playerIds||[]).filter(id=>fl.has(id)).length;const a=(m.absentIds||[]).filter(id=>fl.has(id)).length;return '✓ '+p+'/'+(p+a);})()}</span>
+      <span style="color:var(--red);font-size:12px;">${(()=>{const fl=feeList(currentSeasonId);return '✗ '+(m.absentIds||[]).filter(id=>fl.has(id)).length;})()}</span>
       <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:11px;" onclick="event.stopPropagation();openEditMatch('${m.id}')">✏️</button>
       <button class="btn btn-danger btn-sm" style="padding:2px 6px;" onclick="event.stopPropagation();deleteMatch('${m.id}')">✕</button>
     </div>`).join('');
@@ -1108,17 +1122,16 @@ function showMatchDetail(mid) {
   if (!m) return;
   const presentIds = m.playerIds||[];
   const absentIds = m.absentIds||[];
-  const allIds = [...new Set([...presentIds,...absentIds,...state.players.map(p=>p.id)])];
-  const present = presentIds.map(id=>findPlayer(id)).filter(Boolean);
-  const absent = absentIds.map(id=>findPlayer(id)).filter(Boolean);
-  const neutral = state.players.filter(p=>!presentIds.includes(p.id)&&!absentIds.includes(p.id));
+  const _fld = feeList(currentSeasonId);
+  const present = presentIds.map(id=>findPlayer(id)).filter(p=>p&&_fld.has(p.id));
+  const absent  = absentIds.map(id=>findPlayer(id)).filter(p=>p&&_fld.has(p.id));
+  const neutral = state.players.filter(p=>_fld.has(p.id)&&!presentIds.includes(p.id)&&!absentIds.includes(p.id));
+  const denom = present.length + absent.length;
 
   document.getElementById('match-detail-title').textContent = `#${matchNum(mid, currentSeasonId)} vs. ${m.team}`;
-  const _excl2 = getSD(currentSeasonId).excludedPlayerIds || [];
-  const _spc = state.players.filter(p => !_excl2.includes(p.id)).length;
   document.getElementById('match-detail-counts').innerHTML =
-    `<span style="color:var(--green);font-weight:700;">✓ ${present.length}/${_spc} přítomných</span>
-     <span style="color:var(--red);font-weight:700;margin-left:12px;">✗ ${absent.length}/${_spc} chybí</span>`;
+    `<span style="color:var(--green);font-weight:700;">✓ ${present.length}/${denom} přítomných</span>
+     <span style="color:var(--red);font-weight:700;margin-left:12px;">✗ ${absent.length} chybí</span>`;
 
   const row = (p, type) => {
     const col = type==='p'?'var(--green-bg)':type==='a'?'var(--red-bg)':'var(--surface2)';
@@ -1140,15 +1153,40 @@ function showMatchDetail(mid) {
   openModal('modal-match-detail');
 }
 
+// Hráči na fee listu sezóny (má poplatek nebo noFee) MINUS excluded
+function feeList(sid) {
+  const excluded = new Set(getSD(sid).excludedPlayerIds||[]);
+  return new Set([
+    ...getFees(sid).map(f=>f.playerId),
+    ...(getSD(sid).noFeePlayerIds||[])
+  ].filter(id=>!excluded.has(id)));
+}
+
+let seasonSort = 'name';
+let seasonDebtOnly = false;
+function setSeasonSort(col) {
+  seasonSort = col;
+  ['name','number','games','paid'].forEach(c => {
+    const el = document.getElementById('sth-'+( c==='paid'?'finance':c==='games'?'games':c==='number'?'number':'name'));
+    if(el) el.style.fontWeight = (c===col)?'800':'600';
+  });
+  renderSeasonTable();
+}
+function toggleSeasonDebt() {
+  seasonDebtOnly = !seasonDebtOnly;
+  const btn = document.getElementById('sd-debt-btn');
+  if(btn) { btn.style.background = seasonDebtOnly ? 'var(--red)' : ''; btn.style.color = seasonDebtOnly ? '#fff' : ''; }
+  renderSeasonTable();
+}
 function renderSeasonTable() {
   const filter = document.getElementById('sd-filter').value.toLowerCase();
-  const sort = document.getElementById('sd-sort').value;
-  const paidF = document.getElementById('sd-paid').value;
+  const sort = seasonSort;
+  const paidF = seasonDebtOnly ? 'unpaid' : 'all';
   const matches = getMatches(currentSeasonId);
 
-  const excluded = getSD(currentSeasonId).excludedPlayerIds || [];
+  const _fl = feeList(currentSeasonId);
   let rows = state.players
-    .filter(p=>!excluded.includes(p.id))
+    .filter(p=>_fl.has(p.id))
     .filter(p=>p.name.toLowerCase().includes(filter))
     .map(p=>{
       const pr=getPresent(p.id,currentSeasonId);
@@ -1219,12 +1257,8 @@ function setNoFee(pid, sid) {
   renderSeasonTable();
 }
 function clearNoFee(pid, sid) {
-  const sd = getSD(sid);
-  sd.noFeePlayerIds = (sd.noFeePlayerIds || []).filter(id => id !== pid);
-  state.seasonData[sid] = sd;
-  saveState();
-  if (currentPage === 'season') renderSeasonTable();
-  if (currentPage === 'player') renderPlayerPage();
+  // Nekliknutím hráče neodebíráme ze sezóny — otevřeme dialog pro přidání poplatku
+  openAddFee(pid, sid);
 }
 
 function removePlayerFromSeason(pid, sid) {
@@ -1252,8 +1286,8 @@ function renderPlayerPage() {
   if (!p) return;
   document.getElementById('player-avatar').textContent = p.numberWhite!=null ? ('#'+p.numberWhite) : (p.numberGreen!=null ? ('#'+p.numberGreen) : (p.number!=null?('#'+p.number):'?'));
   document.getElementById('player-detail-name').textContent=p.name;
-  const nwTxt = p.numberWhite!=null?`🤍 #${p.numberWhite}`:'';
-  const ngTxt = p.numberGreen!=null?`💚 #${p.numberGreen}`:(!nwTxt&&p.number!=null?`#${p.number}`:'');
+  const nwTxt = p.numberWhite!=null?`⬜ #${p.numberWhite}`:'';
+  const ngTxt = p.numberGreen!=null?`🟩 #${p.numberGreen}`:(!nwTxt&&p.number!=null?`#${p.number}`:'');
   const sizeTxt = p.size?`📐 ${p.size}`:'';
   var _posIco={'t':String.fromCodePoint(9876,65039),'b':String.fromCodePoint(128737,65039),'r':String.fromCodePoint(127941)};
   const posTxt = p.pos?(_posIco[p.pos[1]]||'')+' '+p.pos:'';
@@ -1373,8 +1407,7 @@ function openEditMatch(mid) {
   document.getElementById('edit-match-team').value = m.team;
   document.getElementById('edit-match-number').value = m.number || (matches.indexOf(m) + 1);
 
-  const excluded = getSD(currentSeasonId).excludedPlayerIds || [];
-  const sorted = [...state.players].filter(p => !excluded.includes(p.id)).sort((a,b) => a.name.localeCompare(b.name));
+  const sorted = [...state.players].filter(p => feeList(currentSeasonId).has(p.id)).sort((a,b) => a.name.localeCompare(b.name));
 
   document.getElementById('edit-match-players-list').innerHTML = sorted.map(p => {
     const s = editMatchPresence[p.id];
@@ -1400,8 +1433,7 @@ function toggleEditPresence(pid, status) {
 }
 
 function editMatchSelectAll() {
-  const excluded = getSD(currentSeasonId).excludedPlayerIds || [];
-  state.players.filter(p => !excluded.includes(p.id)).forEach(p => {
+  state.players.filter(p => feeList(currentSeasonId).has(p.id)).forEach(p => {
     editMatchPresence[p.id] = 'present';
     const s = 'present';
     document.getElementById('epc-'+p.id).className = 'pcitem cp';
@@ -1413,8 +1445,7 @@ function editMatchSelectAll() {
 }
 
 function editMatchClear() {
-  const excluded = getSD(currentSeasonId).excludedPlayerIds || [];
-  state.players.filter(p => !excluded.includes(p.id)).forEach(p => {
+  state.players.filter(p => feeList(currentSeasonId).has(p.id)).forEach(p => {
     editMatchPresence[p.id] = undefined;
     document.getElementById('epc-'+p.id).className = 'pcitem';
     const cp = document.getElementById('echkp-'+p.id);
@@ -1433,8 +1464,8 @@ function saveEditMatch() {
   sd.matches = sd.matches.map(m => {
     if (m.id !== mid) return m;
     return {...m, team, number: num || m.number,
-      playerIds: state.players.filter(p => editMatchPresence[p.id] === 'present').map(p => p.id),
-      absentIds:  state.players.filter(p => editMatchPresence[p.id] === 'absent').map(p => p.id)
+      playerIds: state.players.filter(p => feeList(currentSeasonId).has(p.id) && editMatchPresence[p.id] === 'present').map(p => p.id),
+      absentIds:  state.players.filter(p => feeList(currentSeasonId).has(p.id) && editMatchPresence[p.id] === 'absent').map(p => p.id)
     };
   });
   state.seasonData[currentSeasonId] = sd;
@@ -1446,8 +1477,7 @@ function saveEditMatch() {
 // ==================== ADD MATCH ====================
 function openAddMatch() {
   matchPresence={};
-  const excluded = getSD(currentSeasonId).excludedPlayerIds || [];
-  const sorted=[...state.players].filter(p=>!excluded.includes(p.id)).sort((a,b)=>a.name.localeCompare(b.name));
+  const sorted=[...state.players].filter(p=>feeList(currentSeasonId).has(p.id)).sort((a,b)=>a.name.localeCompare(b.name));
   document.getElementById('match-players-list').innerHTML=sorted.map(p=>`
     <div class="pcitem" id="pc-${p.id}">
       <div class="chkbox" id="chkp-${p.id}" onclick="togglePresence('${p.id}','present')" title="Byl"></div>
@@ -1469,16 +1499,14 @@ function togglePresence(pid,status) {
 }
 
 function selectAllPresent() {
-  state.players.forEach(p=>{ matchPresence[p.id]='present'; });
-  state.players.forEach(p=>togglePresence(p.id,'present'));
-  state.players.forEach(p=>{ if(matchPresence[p.id]!=='present'){matchPresence[p.id]='present'; togglePresence(p.id,'present');}});
-  // rebuild
-  state.players.forEach(p=>{ matchPresence[p.id]=undefined; });
-  state.players.forEach(p=>togglePresence(p.id,'present'));
+  const _fl=[...feeList(currentSeasonId)].map(id=>state.players.find(p=>p.id===id)).filter(Boolean);
+  _fl.forEach(p=>{ matchPresence[p.id]=undefined; });
+  _fl.forEach(p=>togglePresence(p.id,'present'));
 }
 
 function clearPresence() {
-  state.players.forEach(p=>{
+  const _fl=[...feeList(currentSeasonId)].map(id=>state.players.find(p=>p.id===id)).filter(Boolean);
+  _fl.forEach(p=>{
     matchPresence[p.id]=undefined;
     document.getElementById('pc-'+p.id).className='pcitem';
     document.getElementById('chkp-'+p.id).className='chkbox'; document.getElementById('chkp-'+p.id).textContent='';
@@ -1492,8 +1520,8 @@ function saveMatch() {
   const sd=getSD(currentSeasonId);
   if(!sd.matches) sd.matches=[];
   sd.matches.push({id:uid(), team, number: sd.matches.length+1,
-    playerIds:state.players.filter(p=>matchPresence[p.id]==='present').map(p=>p.id),
-    absentIds:state.players.filter(p=>matchPresence[p.id]==='absent').map(p=>p.id)
+    playerIds:state.players.filter(p=>feeList(currentSeasonId).has(p.id)&&matchPresence[p.id]==='present').map(p=>p.id),
+    absentIds:state.players.filter(p=>feeList(currentSeasonId).has(p.id)&&matchPresence[p.id]==='absent').map(p=>p.id)
   });
   state.seasonData[currentSeasonId]=sd;
   saveState(); closeModal('modal-add-match');
@@ -1652,6 +1680,80 @@ function handleLogoUpload(event) {
     appSettings.logoSrc=src;
   };
   reader.readAsDataURL(file);
+}
+
+// ==================== SEASON PICK PLAYERS FROM LIST ====================
+let sppSelected = {};
+function openSeasonPickPlayers() {
+  sppSelected = {};
+  document.getElementById('spp-filter').value = '';
+  const season = findSeason(currentSeasonId);
+  document.getElementById('spp-sub').textContent = `Sezóna: ${season.name}`;
+  renderSeasonPickList();
+  openModal('modal-season-pick-players');
+}
+function sppAvailable() {
+  const inSeason = feeList(currentSeasonId);
+  const filter = (document.getElementById('spp-filter')||{}).value||'';
+  return state.players
+    .filter(p => !inSeason.has(p.id))
+    .filter(p => p.name.toLowerCase().includes(filter.toLowerCase()))
+    .sort((a,b) => a.name.localeCompare(b.name));
+}
+function renderSeasonPickList() {
+  const players = sppAvailable();
+  const list = document.getElementById('spp-list');
+  const countEl = document.getElementById('spp-count');
+  const chosen = Object.values(sppSelected).filter(Boolean).length;
+  if (countEl) countEl.textContent = chosen > 0 ? `Vybráno: ${chosen}` : `${players.length} hráčů mimo sezónu`;
+  if (players.length === 0) {
+    list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--muted);font-size:14px;">Všichni hráči jsou již v sezóně.</div>';
+    return;
+  }
+  list.innerHTML = players.map(p => {
+    const sel = !!sppSelected[p.id];
+    return `<div class="pcitem${sel?' cp':''}" id="spp-${p.id}" onclick="toggleSpp('${p.id}')">
+      <div class="chkbox${sel?' p':''}" id="sppchk-${p.id}">${sel?'✓':''}</div>
+      <span style="flex:1;font-size:14px;font-weight:600;">${p.name}</span>
+      <span style="font-size:12px;color:var(--muted);">${playerNumText(p)}</span>
+      ${p.pos ? `<span style="font-size:11px;color:var(--muted);">${p.pos}</span>` : ''}
+    </div>`;
+  }).join('');
+}
+function toggleSpp(pid) {
+  sppSelected[pid] = !sppSelected[pid];
+  const el = document.getElementById('spp-'+pid);
+  const chk = document.getElementById('sppchk-'+pid);
+  const sel = !!sppSelected[pid];
+  el.className = 'pcitem' + (sel?' cp':'');
+  chk.className = 'chkbox' + (sel?' p':'');
+  chk.textContent = sel ? '✓' : '';
+  const countEl = document.getElementById('spp-count');
+  const chosen = Object.values(sppSelected).filter(Boolean).length;
+  if (countEl) countEl.textContent = chosen > 0 ? `Vybráno: ${chosen}` : `${sppAvailable().length} hráčů mimo sezónu`;
+}
+function sppSelectAll() {
+  sppAvailable().forEach(p => { sppSelected[p.id] = true; });
+  renderSeasonPickList();
+}
+function sppSelectNone() {
+  sppSelected = {};
+  renderSeasonPickList();
+}
+function saveSeasonPick() {
+  const chosen = Object.keys(sppSelected).filter(id => sppSelected[id]);
+  if (chosen.length === 0) { closeModal('modal-season-pick-players'); return; }
+  const sd = getSD(currentSeasonId);
+  if (!sd.noFeePlayerIds) sd.noFeePlayerIds = [];
+  if (!sd.excludedPlayerIds) sd.excludedPlayerIds = [];
+  chosen.forEach(pid => {
+    if (!sd.noFeePlayerIds.includes(pid)) sd.noFeePlayerIds.push(pid);
+    sd.excludedPlayerIds = sd.excludedPlayerIds.filter(id => id !== pid);
+  });
+  state.seasonData[currentSeasonId] = sd;
+  saveState();
+  closeModal('modal-season-pick-players');
+  renderSeasonPage();
 }
 
 // ==================== SEASON ADD PLAYER ====================
