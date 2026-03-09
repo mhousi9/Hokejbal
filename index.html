@@ -1222,8 +1222,9 @@ function renderSeasonTable() {
          <div class="fee-bar"><div class="fee-fill" style="width:${pct}%"></div></div>`
       : `<span style="color:var(--muted)">—</span>`;
     const stateHtml = r.fee
-      ? (r.isPaid ? `<span class="badge badge-green">✓ OK</span>`
-          : `<button class="btn btn-gold btn-sm" onclick="openPayFee('${r.p.id}','${currentSeasonId}')">Zaplatit</button>`)
+      ? (r.isPaid
+          ? `<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;"><span class="badge badge-green">✓ OK</span><button class="btn btn-ghost btn-sm" onclick="openEditFee('${r.p.id}','${currentSeasonId}')" title="Upravit poplatek">✏️</button></div>`
+          : `<div style="display:flex;gap:4px;flex-wrap:wrap;"><button class="btn btn-gold btn-sm" onclick="openPayFee('${r.p.id}','${currentSeasonId}')">Zaplatit</button><button class="btn btn-ghost btn-sm" onclick="openEditFee('${r.p.id}','${currentSeasonId}')" title="Upravit poplatek">✏️</button></div>`)
       : isNoFee(r.p.id, currentSeasonId)
         ? `<span class="badge badge-muted" style="cursor:pointer;" onclick="clearNoFee('${r.p.id}','${currentSeasonId}')" title="Klikni pro zrušení">🚫 Nemá poplatek</span>`
         : `<div style="display:flex;gap:4px;flex-wrap:wrap;">
@@ -1462,28 +1463,28 @@ function saveEditMatch() {
   if (!team) return;
   const sd = getSD(currentSeasonId);
 
-  if (newNum) {
-    // Zajistit, že všechny zápasy mají explicitní číslo
-    sd.matches = sd.matches.map((m, i) => ({...m, number: m.number || i + 1}));
-    // Posunout čísla ostatních zápasů >= newNum o 1 výše
-    sd.matches = sd.matches.map(m => {
-      if (m.id === mid) return m;
-      if (m.number >= newNum) return {...m, number: m.number + 1};
-      return m;
-    });
-  }
+  // Nejprve přiřadit explicitní čísla všem zápasům
+  sd.matches = sd.matches.map((m, i) => ({...m, number: m.number || i + 1}));
 
-  // Uložit upravený zápas s novým číslem a přítomností
+  // Aktualizovat data editovaného zápasu (tým, přítomnosti)
   sd.matches = sd.matches.map(m => {
     if (m.id !== mid) return m;
-    return {...m, team, number: newNum || m.number,
+    return {...m, team,
       playerIds: state.players.filter(p => feeList(currentSeasonId).has(p.id) && editMatchPresence[p.id] === 'present').map(p => p.id),
       absentIds:  state.players.filter(p => feeList(currentSeasonId).has(p.id) && editMatchPresence[p.id] === 'absent').map(p => p.id)
     };
   });
 
-  // Seřadit zápasy podle čísla od nejnižšího
-  sd.matches.sort((a, b) => (a.number || 0) - (b.number || 0));
+  if (newNum) {
+    // Vyjmout editovaný zápas, seřadit zbytek a vložit na novou pozici
+    const editedMatch = sd.matches.find(m => m.id === mid);
+    const others = sd.matches.filter(m => m.id !== mid)
+      .sort((a, b) => a.number - b.number);
+    const pos = Math.max(1, Math.min(newNum, others.length + 1));
+    others.splice(pos - 1, 0, editedMatch);
+    // Přečíslovat všechny zápasy od 1
+    sd.matches = others.map((m, i) => ({...m, number: i + 1}));
+  }
 
   state.seasonData[currentSeasonId] = sd;
   saveState();
