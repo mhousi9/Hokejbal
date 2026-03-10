@@ -1015,7 +1015,13 @@ function renderJerseySummary() {
   const colHtml = (type, items) => {
     const label = type==='white' ? '⬜ Bílé dresy' : '🟩 Zelené dresy';
     const accentCol = type==='white' ? '#94a3b8' : 'var(--green2)';
-    const rows = items.map((j,i) => `
+    const sorted = items.map((j,i)=>({j,i})).sort((a,b)=>{
+      if(a.j.number==null && b.j.number==null) return 0;
+      if(a.j.number==null) return 1;
+      if(b.j.number==null) return -1;
+      return a.j.number - b.j.number;
+    });
+    const rows = sorted.map(({j,i}) => `
       <div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);">
         <input class="input" type="number" min="0" max="99" placeholder="#" value="${j.number!=null?j.number:''}"
           style="width:54px;padding:5px 8px;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;"
