@@ -213,7 +213,7 @@ hr.divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
   <div class="card" style="padding:0;overflow:hidden;">
     <div class="tbl-wrap">
     <table class="tbl">
-      <thead><tr><th style="width:36px;color:var(--muted);">#</th><th id="th-name" onclick="setPlayerSort('name')" style="cursor:pointer;">Jméno</th><th id="th-number" onclick="setPlayerSort('number')" style="cursor:pointer;"># Dres</th><th>Vel.</th><th>Post</th><th id="th-debt" onclick="setPlayerSort('debt')" style="cursor:pointer;">Dluh</th><th></th></tr></thead>
+      <thead><tr><th style="width:36px;color:var(--muted);">#</th><th id="th-name" onclick="setPlayerSort('name')" style="cursor:pointer;">Jméno</th><th id="th-number" onclick="setPlayerSort('number')" style="cursor:pointer;"># Dres</th><th>Vel.</th><th id="th-pos" onclick="setPlayerSort('pos')" style="cursor:pointer;">Post</th><th id="th-debt" onclick="setPlayerSort('debt')" style="cursor:pointer;">Dluh</th><th></th></tr></thead>
       <tbody id="players-tbody"></tbody>
     </table>
     </div>
@@ -1016,9 +1016,11 @@ function setPlayerSort(col) {
   const tn = document.getElementById('th-name');
   const td = document.getElementById('th-number');
   const tdt = document.getElementById('th-debt');
+  const tp = document.getElementById('th-pos');
   if(tn) tn.style.fontWeight = col==='name'?'800':'600';
   if(td) td.style.fontWeight = col==='number'?'800':'600';
   if(tdt) tdt.style.fontWeight = col==='debt'?'800':'600';
+  if(tp) tp.style.fontWeight = col==='pos'?'800':'600';
   renderPlayersTable();
 }
 function playerTotalDebt(pid) {
@@ -1039,6 +1041,13 @@ function renderPlayersTable() {
   let players = state.players.filter(p=>p.name.toLowerCase().includes(filter.toLowerCase()));
   if (sort === 'debt') {
     players.sort((a,b) => playerTotalDebt(b.id) - playerTotalDebt(a.id));
+  } else if (sort === 'pos') {
+    const posOrder = {'Brankář':0,'Obránce':1,'Útočník':2};
+    players.sort((a,b) => {
+      const ao = a.pos!=null ? (posOrder[a.pos]??3) : 4;
+      const bo = b.pos!=null ? (posOrder[b.pos]??3) : 4;
+      return ao!==bo ? ao-bo : a.name.localeCompare(b.name);
+    });
   } else {
     players.sort((a,b) => sort==='name' ? a.name.localeCompare(b.name) : (a.number||0)-(b.number||0));
   }
@@ -1304,6 +1313,12 @@ function renderSeasonTable() {
     if(sort==='number') return (a.p.number||0)-(b.p.number||0);
     if(sort==='paid') return b.paid-a.paid;
     if(sort==='debt') return b.remaining-a.remaining;
+    if(sort==='pos') {
+      const posOrder = {'Brankář':0,'Obránce':1,'Útočník':2};
+      const ao = a.p.pos!=null ? (posOrder[a.p.pos]??3) : 4;
+      const bo = b.p.pos!=null ? (posOrder[b.p.pos]??3) : 4;
+      return ao!==bo ? ao-bo : a.p.name.localeCompare(b.p.name);
+    }
     return 0;
   });
 
