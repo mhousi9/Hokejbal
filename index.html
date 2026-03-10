@@ -1224,14 +1224,16 @@ function showMatchDetail(mid) {
     `<span style="color:var(--green);font-weight:700;">✓ ${present.length}/${denom} přítomných</span>
      <span style="color:var(--red);font-weight:700;margin-left:12px;">✗ ${absent.length} chybí</span>`;
 
+  const _posIcoMD = {'t':'⚔️','b':'🛡️','r':'🥅'};
   const row = (p, type) => {
     const col = type==='p'?'var(--green-bg)':type==='a'?'var(--red-bg)':'var(--surface2)';
     const border = type==='p'?'#b8e8d0':type==='a'?'#f5c2c6':'var(--border)';
     const icon = type==='p'?'✓':type==='a'?'✗':'·';
     const icol = type==='p'?'var(--green2)':type==='a'?'var(--red2)':'var(--muted)';
+    const posIco = p.pos ? (_posIcoMD[p.pos[1]]||'') : '';
     return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;background:${col};border:1px solid ${border};margin-bottom:4px;cursor:pointer;" onclick="closeModal('modal-match-detail');openPlayer('${p.id}','season')">
       <span style="font-size:14px;font-weight:700;color:${icol};width:14px;text-align:center;">${icon}</span>
-      <span style="flex:1;font-size:14px;font-weight:600;">${p.name}</span>
+      <span style="flex:1;font-size:14px;font-weight:600;">${posIco ? `<span style="font-size:13px;margin-right:4px;">${posIco}</span>` : ''}${p.name}</span>
       <span style="font-size:12px;color:var(--muted);">${playerNumText(p)}</span>
     </div>`;
   };
@@ -1333,7 +1335,7 @@ function renderSeasonTable() {
       <td style="${rankStyle}">${i+1}</td>
       <td style="font-weight:600;color:var(--dark);">${debtEmoji ? `<span style="margin-right:4px;">${debtEmoji}</span>` : ''}${r.p.name}${debtLabel}</td>
       <td>${playerNumBadge(r.p)}</td>
-      <td><span style="color:var(--red);font-weight:700;">${r.games}</span><span style="color:var(--muted);font-size:12px;">/${matches.length}</span></td>
+      <td><span style="color:var(--red);font-weight:700;">${r.games}</span><span style="color:var(--muted);font-size:12px;">/${matches.filter(m=>(m.playerIds||[]).includes(r.p.id)||(m.absentIds||[]).includes(r.p.id)).length}</span></td>
       <td>${feeHtml}</td>
       <td onclick="event.stopPropagation()">${stateHtml}</td>
       <td onclick="event.stopPropagation()"><button class="btn btn-danger btn-sm" onclick="removePlayerFromSeason('${r.p.id}','${currentSeasonId}')" title="Odebrat z sezóny">✕</button></td>
@@ -1382,7 +1384,7 @@ function renderPlayerPage() {
   const nwTxt = p.numberWhite!=null?`⬜ #${p.numberWhite}`:'';
   const ngTxt = p.numberGreen!=null?`🟩 #${p.numberGreen}`:(!nwTxt&&p.number!=null?`#${p.number}`:'');
   const sizeTxt = p.size?`📐 ${p.size}`:'';
-  var _posIco={'t':String.fromCodePoint(9876,65039),'b':String.fromCodePoint(128737,65039),'r':String.fromCodePoint(127941)};
+  var _posIco={'t':String.fromCodePoint(9876,65039),'b':String.fromCodePoint(128737,65039),'r':'🥅'};
   const posTxt = p.pos?(_posIco[p.pos[1]]||'')+' '+p.pos:'';
   const subParts=[nwTxt,ngTxt,sizeTxt,posTxt].filter(Boolean);
   document.getElementById('player-detail-sub').textContent=subParts.join('  ·  ')||'Bez informací';
@@ -1463,7 +1465,7 @@ function renderPlayerPage() {
     html+=`<div class="card" style="padding:16px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
         <div class="card-title" style="margin:0;">${season.name}</div>
-        ${matches.length>0 ? `<span style="color:var(--red);font-family:'Barlow Condensed';font-size:20px;font-weight:800;">${present.length}/${matches.length}</span>` : ''}
+        ${matches.length>0 ? `<span style="color:var(--red);font-family:'Barlow Condensed';font-size:20px;font-weight:800;">${present.length}/${matches.filter(m=>(m.playerIds||[]).includes(p.id)||(m.absentIds||[]).includes(p.id)).length}</span>` : ''}
       </div>
       ${feeBlock}
       ${itemsBlock}
