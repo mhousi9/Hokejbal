@@ -19,6 +19,8 @@ if('serviceWorker' in navigator){
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -188,6 +190,7 @@ hr.divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
   <nav class="nav">
     <button class="nav-btn active" onclick="showPage('home')">Sezóny</button>
     <button class="nav-btn" onclick="showPage('players')">Hráči</button>
+    <button class="nav-btn" onclick="showPage('schedule')">Zápasy</button>
     <button class="nav-btn" onclick="showPage('settings')">⚙️ Nastavení</button>
   </nav>
 </header>
@@ -219,6 +222,63 @@ hr.divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
   <div class="card" style="margin-top:16px;">
     <div class="card-title" style="margin-bottom:14px;">🎽 Dresy — přehled</div>
     <div id="jerseys-summary"></div>
+  </div>
+</div>
+
+<!-- SCHEDULE -->
+<div id="page-schedule" class="page">
+  <div class="page-title">Zápasy</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;align-items:center;">
+    <button class="btn btn-primary" onclick="openAddScheduleMatch()">+ Přidat zápas</button>
+    <button class="btn btn-green btn-sm" onclick="document.getElementById('schedule-import-docx').click()">📥 Import z DOCX</button>
+    <input type="file" id="schedule-import-docx" accept=".docx" style="display:none" onchange="importScheduleDocx(event)">
+    <button class="btn btn-green btn-sm" onclick="document.getElementById('schedule-import-xls').click()">📥 Import z XLS</button>
+    <input type="file" id="schedule-import-xls" accept=".xls,.xlsx" style="display:none" onchange="importScheduleXls(event)">
+    <button class="btn btn-secondary btn-sm" onclick="exportScheduleDocx()">📤 Export do DOCX</button>
+    <span id="schedule-import-status" style="font-size:13px;color:var(--muted);"></span>
+  </div>
+  <div id="schedule-list"></div>
+</div>
+
+<!-- MODAL: ADD/EDIT SCHEDULE MATCH -->
+<div id="modal-schedule-match" class="overlay" style="display:none;" onclick="if(event.target===this)closeModal('modal-schedule-match')">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title" id="schedule-modal-title">Přidat zápas</div>
+    <input type="hidden" id="schedule-match-id">
+    <div class="form-row">
+      <div class="form-group" style="max-width:100px;">
+        <label class="form-label">Kolo</label>
+        <input class="input" type="number" id="schedule-number" placeholder="1">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Datum</label>
+        <input class="input" type="date" id="schedule-date">
+      </div>
+      <div class="form-group" style="max-width:110px;">
+        <label class="form-label">Čas</label>
+        <input class="input" type="time" id="schedule-time">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Domácí tým</label>
+      <input class="input" id="schedule-home-team" placeholder="Název domácího týmu">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Hostující tým</label>
+      <input class="input" id="schedule-away-team" placeholder="Název hostujícího týmu">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Sparta hraje</label>
+      <div style="display:flex;gap:8px;">
+        <button id="sch-btn-home" class="btn btn-green" onclick="scheduleSetHome(true)" style="flex:1;">🏠 Doma</button>
+        <button id="sch-btn-away" class="btn btn-secondary" onclick="scheduleSetHome(false)" style="flex:1;">✈️ Venku</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" id="schedule-delete-btn" style="margin-right:auto;display:none;" onclick="deleteScheduleMatch()">🗑 Smazat</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-schedule-match')">Zrušit</button>
+      <button class="btn btn-primary" onclick="saveScheduleMatch()">Uložit</button>
+    </div>
   </div>
 </div>
 
@@ -802,7 +862,7 @@ function injectPWAManifest(iconSrc) {
 }
 
 // ==================== DEFAULT DATA ====================
-const DEFAULT_DATA = {"players": [], "seasons": [], "seasonData": {}, "appName": "Hokejbal", "logoSize": 48, "logoOffsetX": 0, "logoOffsetY": 0};
+const DEFAULT_DATA = {"players": [], "seasons": [], "seasonData": {}, "schedule": [], "appName": "Hokejbal", "logoSize": 48, "logoOffsetX": 0, "logoOffsetY": 0};
 
 // ==================== STATE ====================
 let state;
@@ -880,13 +940,14 @@ function showPage(page) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-  const navMap = {home:0, players:1, settings:2};
+  const navMap = {home:0, players:1, schedule:2, settings:3};
   if (navMap[page]!==undefined) document.querySelectorAll('.nav-btn')[navMap[page]].classList.add('active');
   currentPage = page;
   if (page==='home') renderHome();
   if (page==='players') renderPlayersTable();
   if (page==='season') renderSeasonPage();
   if (page==='player') renderPlayerPage();
+  if (page==='schedule') renderSchedule();
   if (page==='settings') initSettings();
 }
 function openModal(id) { document.getElementById(id).style.display='flex'; }
@@ -1629,6 +1690,378 @@ function savePayment() {
   saveState(); closeModal('modal-pay-fee');
   if(currentPage==='season') renderSeasonPage();
   if(currentPage==='player') renderPlayerPage();
+}
+
+// ==================== SCHEDULE ====================
+function getSchedule() { return state.schedule || []; }
+
+function renderSchedule() {
+  const matches = getSchedule().slice().sort((a,b) => (a.number||0)-(b.number||0));
+  const el = document.getElementById('schedule-list');
+  if (!matches.length) {
+    el.innerHTML = '<div class="card" style="color:var(--muted);text-align:center;padding:32px;">Žádné zápasy. Přidej ručně nebo importuj z DOCX.</div>';
+    return;
+  }
+  el.innerHTML = matches.map(m => {
+    const icon = m.spartaIsHome ? '🏠' : '✈️';
+    const label = m.spartaIsHome ? 'Doma' : 'Venku';
+    const labelCol = m.spartaIsHome ? 'var(--green2)' : '#c07000';
+    const labelBg = m.spartaIsHome ? 'var(--green-bg)' : 'var(--gold-bg)';
+    const matchLine = m.spartaIsHome
+      ? `<strong>${m.homeTeam}</strong> <span style="color:var(--muted);">vs</span> ${m.awayTeam}`
+      : `${m.homeTeam} <span style="color:var(--muted);">vs</span> <strong>${m.awayTeam}</strong>`;
+    const dateFmt = m.date ? (() => {
+      const d = new Date(m.date);
+      return d.toLocaleDateString('cs-CZ', {day:'numeric', month:'numeric', year:'numeric', weekday:'short'});
+    })() : '—';
+    return `<div class="card" style="padding:14px 16px;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;color:var(--muted);min-width:34px;">#${m.number||'?'}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:15px;font-weight:600;color:var(--dark);">${matchLine}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px;">${dateFmt}${m.time ? ' · ' + m.time : ''}</div>
+        </div>
+        <span style="background:${labelBg};color:${labelCol};padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;">${icon} ${label}</span>
+        <button class="btn btn-ghost btn-sm" onclick="openEditScheduleMatch('${m.id}')">✏️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let scheduleIsHome = true;
+function scheduleSetHome(val) {
+  scheduleIsHome = val;
+  document.getElementById('sch-btn-home').className = val ? 'btn btn-green' : 'btn btn-secondary';
+  document.getElementById('sch-btn-away').className = !val ? 'btn btn-gold' : 'btn btn-secondary';
+  // Auto-swap team names when switching
+  const home = document.getElementById('schedule-home-team');
+  const away = document.getElementById('schedule-away-team');
+  const spartan = appSettings.name || 'NFC Sparta Kladno';
+  if (val && away.value === spartan && home.value !== spartan) { away.value = home.value; home.value = spartan; }
+  if (!val && home.value === spartan && away.value !== spartan) { home.value = away.value; away.value = spartan; }
+}
+
+function openAddScheduleMatch() {
+  scheduleIsHome = true;
+  document.getElementById('schedule-modal-title').textContent = 'Přidat zápas';
+  document.getElementById('schedule-match-id').value = '';
+  document.getElementById('schedule-number').value = (getSchedule().length ? Math.max(...getSchedule().map(m=>m.number||0)) + 1 : 1);
+  document.getElementById('schedule-date').value = '';
+  document.getElementById('schedule-time').value = '';
+  document.getElementById('schedule-home-team').value = appSettings.name || 'NFC Sparta Kladno';
+  document.getElementById('schedule-away-team').value = '';
+  document.getElementById('schedule-delete-btn').style.display = 'none';
+  scheduleSetHome(true);
+  openModal('modal-schedule-match');
+}
+
+function openEditScheduleMatch(id) {
+  const m = getSchedule().find(x => x.id === id);
+  if (!m) return;
+  scheduleIsHome = m.spartaIsHome;
+  document.getElementById('schedule-modal-title').textContent = 'Upravit zápas';
+  document.getElementById('schedule-match-id').value = id;
+  document.getElementById('schedule-number').value = m.number || '';
+  document.getElementById('schedule-date').value = m.date || '';
+  document.getElementById('schedule-time').value = m.time || '';
+  document.getElementById('schedule-home-team').value = m.homeTeam || '';
+  document.getElementById('schedule-away-team').value = m.awayTeam || '';
+  document.getElementById('schedule-delete-btn').style.display = '';
+  scheduleSetHome(m.spartaIsHome);
+  openModal('modal-schedule-match');
+}
+
+function saveScheduleMatch() {
+  const id = document.getElementById('schedule-match-id').value;
+  const number = parseInt(document.getElementById('schedule-number').value) || 0;
+  const date = document.getElementById('schedule-date').value;
+  const time = document.getElementById('schedule-time').value;
+  const homeTeam = document.getElementById('schedule-home-team').value.trim();
+  const awayTeam = document.getElementById('schedule-away-team').value.trim();
+  if (!homeTeam || !awayTeam) return;
+  if (!state.schedule) state.schedule = [];
+  if (id) {
+    state.schedule = state.schedule.map(m => m.id !== id ? m : {...m, number, date, time, homeTeam, awayTeam, spartaIsHome: scheduleIsHome});
+  } else {
+    state.schedule.push({id: uid(), number, date, time, homeTeam, awayTeam, spartaIsHome: scheduleIsHome});
+  }
+  saveState();
+  closeModal('modal-schedule-match');
+  renderSchedule();
+}
+
+function deleteScheduleMatch() {
+  const id = document.getElementById('schedule-match-id').value;
+  if (!confirm('Smazat tento zápas?')) return;
+  state.schedule = (state.schedule || []).filter(m => m.id !== id);
+  saveState();
+  closeModal('modal-schedule-match');
+  renderSchedule();
+}
+
+// ---- DOCX IMPORT ----
+// Shared row parser — col0=číslo kola, col1=datum, col2=čas, col3=zápas
+function parseScheduleRow(col0, col1, col2, col3) {
+  const num = parseInt(String(col0||''));
+  if (isNaN(num)) return null;
+  // Date: "15. 3. 2026" nebo rozsah "3.–5. 4. 2026" (bere první datum)
+  const dateMatch = String(col1||'').match(/(\d{1,2})\.\s*(?:[–\-]\s*\d{1,2}\.\s*)?(\d{1,2})\.\s*(\d{4})/);
+  let date = '';
+  if (dateMatch) date = `${dateMatch[3]}-${dateMatch[2].padStart(2,'0')}-${dateMatch[1].padStart(2,'0')}`;
+  // Time: "09:00" → použit, jinak prázdno
+  const timeMatch = String(col2||'').match(/\d{1,2}:\d{2}/);
+  const time = timeMatch ? timeMatch[0] : '';
+  // Match
+  const col3s = String(col3||'');
+  const isHome = col3s.includes('DOMA') || col3s.includes('🏠');
+  const vsSplit = col3s.split(/\s+vs\.?\s+/i);
+  if (vsSplit.length < 2) return null;
+  const clean = s => s.replace(/🏠|✈️?|DOMA|VENKU|\*+/g,'').trim();
+  let homeTeam, awayTeam;
+  if (isHome) { homeTeam = clean(vsSplit[0]); awayTeam = clean(vsSplit[1]); }
+  else { awayTeam = clean(vsSplit[0]); homeTeam = clean(vsSplit[1]); }
+  if (!homeTeam || !awayTeam) return null;
+  return {id: uid(), number: num, date, time, homeTeam, awayTeam, spartaIsHome: isHome};
+}
+
+function mergeImportedSchedule(imported, st) {
+  if (!imported.length) { st.innerHTML='<span style="color:var(--red);">❌ Nenalezeny žádné zápasy. Zkontroluj formát souboru.</span>'; return false; }
+  if (!confirm(`Importovat ${imported.length} zápasů? Duplicitní kola budou přepsána.`)) return false;
+  if (!state.schedule) state.schedule = [];
+  imported.forEach(im => {
+    const idx = state.schedule.findIndex(m => m.number === im.number);
+    if (idx >= 0) state.schedule[idx] = im; else state.schedule.push(im);
+  });
+  saveState();
+  st.innerHTML = `<span style="color:var(--green2);">✓ Importováno ${imported.length} zápasů.</span>`;
+  renderSchedule();
+  return true;
+}
+
+function importScheduleDocx(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const st = document.getElementById('schedule-import-status');
+  st.textContent = 'Načítám...';
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      if (typeof JSZip === 'undefined') { st.innerHTML='<span style="color:var(--red);">❌ JSZip není dostupné.</span>'; return; }
+      const zip = await JSZip.loadAsync(e.target.result);
+      const xmlStr = await zip.file('word/document.xml').async('string');
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(xmlStr, 'application/xml');
+      const ns = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+      function cellText(tc) { return Array.from(tc.getElementsByTagNameNS(ns, 't')).map(t=>t.textContent).join('').trim(); }
+      const rows = Array.from(doc.getElementsByTagNameNS(ns, 'tr'));
+      const imported = [];
+      for (const row of rows) {
+        const cells = Array.from(row.getElementsByTagNameNS(ns, 'tc'));
+        if (cells.length < 4) continue;
+        const r = parseScheduleRow(cellText(cells[0]), cellText(cells[1]), cellText(cells[2]), cellText(cells[3]));
+        if (r) imported.push(r);
+      }
+      mergeImportedSchedule(imported, st);
+    } catch(err) { st.innerHTML = `<span style="color:var(--red);">❌ Chyba: ${err.message}</span>`; }
+    event.target.value = '';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function importScheduleXls(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const st = document.getElementById('schedule-import-status');
+  st.textContent = 'Načítám...';
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      if (typeof XLSX === 'undefined') { st.innerHTML='<span style="color:var(--red);">❌ SheetJS není dostupné.</span>'; return; }
+
+      // Parse with dates as numbers for manual conversion
+      const wb = XLSX.read(e.target.result, {type:'array', cellDates:false, raw:true});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:''});
+
+      // Detect format: league format has "Domácí" and "Hosté" header
+      const headerRow = rows.find(r => r.some(c => String(c).includes('Domácí')));
+      const imported = [];
+
+      if (headerRow) {
+        // === LEAGUE FORMAT (ligový rozpis) ===
+        // Cols: 0=Soutěž, 1=Č.utkání, 2=Kolo, 3=Den, 4=Datum, 5=Čas, 6=Hřiště, 7=Domácí, 8=-, 9=Hosté
+
+        // Collect all unique team names from the file
+        const allTeams = new Set();
+        for (const row of rows) {
+          const c7 = String(row[7] || '').trim();
+          const c9 = String(row[9] || '').trim();
+          if (c7 && c7 !== 'Domácí') allTeams.add(c7);
+          if (c9 && c9 !== 'Hosté') allTeams.add(c9);
+        }
+
+        // Try to find our team: appSettings.name, then appSettings.sub, then partial "Sparta" match
+        const candidates = [
+          appSettings.name,
+          appSettings.sub,
+          ...[...allTeams].filter(t => t.toLowerCase().includes('sparta'))
+        ].filter(Boolean).map(s => s.trim());
+
+        let teamName = null;
+        for (const cand of candidates) {
+          if (allTeams.has(cand)) { teamName = cand; break; }
+        }
+
+        if (!teamName) {
+          st.innerHTML = '<span style="color:var(--red);">❌ Tým nenalezen v souboru. Nastav název týmu v Nastavení přesně jako: <strong>' +
+            [...allTeams].slice(0,5).join(', ') + '</strong></span>';
+          event.target.value = ''; return;
+        }
+
+        let matchNum = 0;
+        for (const row of rows) {
+          const c7 = String(row[7] || '').trim();
+          const c9 = String(row[9] || '').trim();
+          const spartaHome = c7 === teamName;
+          const spartaAway = c9 === teamName;
+          if (!spartaHome && !spartaAway) continue;
+
+          matchNum++;
+
+          // Date: Excel serial number → YYYY-MM-DD
+          let date = '';
+          const rawDate = row[4];
+          if (typeof rawDate === 'number' && rawDate > 40000 && rawDate < 55000) {
+            const n = rawDate > 59 ? rawDate - 1 : rawDate;
+            const d = new Date(Date.UTC(1899, 11, 31) + n * 86400000);
+            date = d.toISOString().slice(0, 10);
+          }
+
+          // Time: fraction of day → HH:MM
+          let time = '';
+          const rawTime = row[5];
+          if (typeof rawTime === 'number' && rawTime > 0 && rawTime < 1) {
+            const mins = Math.round(rawTime * 24 * 60);
+            time = String(Math.floor(mins/60)).padStart(2,'0') + ':' + String(mins%60).padStart(2,'0');
+          } else if (String(rawTime).includes(':')) {
+            time = String(rawTime).slice(0, 5);
+          }
+
+          imported.push({
+            id: uid(), number: matchNum, date, time,
+            homeTeam: spartaHome ? teamName : c7,
+            awayTeam: spartaAway ? teamName : c9,
+            spartaIsHome: spartaHome
+          });
+        }
+
+      } else {
+        // === 4-COLUMN FORMAT (kolo|datum|čas|zápas) ===
+        const rowsStr = XLSX.utils.sheet_to_json(ws, {header:1, raw:false, defval:''});
+        for (const row of rowsStr) {
+          if (row.length < 4) continue;
+          const r = parseScheduleRow(row[0], row[1], row[2], row[3]);
+          if (r) imported.push(r);
+        }
+      }
+
+      mergeImportedSchedule(imported, st);
+    } catch(err) { st.innerHTML = `<span style="color:var(--red);">❌ Chyba: ${err.message}</span>`; }
+    event.target.value = '';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ---- DOCX EXPORT ----
+async function exportScheduleDocx() {
+  if (typeof JSZip === 'undefined') { alert('JSZip není dostupné (potřebuje připojení k internetu při prvním načtení).'); return; }
+  const matches = getSchedule().slice().sort((a,b)=>(a.number||0)-(b.number||0));
+  const teamName = appSettings.name || 'NFC Sparta Kladno';
+
+  const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const boldCell = (txt, w) => `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/><w:tcMar><w:top w:w="80" w:type="dxa"/><w:bottom w:w="80" w:type="dxa"/><w:left w:w="120" w:type="dxa"/><w:right w:w="120" w:type="dxa"/></w:tcMar></w:tcPr><w:p><w:r><w:rPr><w:b/></w:rPr><w:t>${esc(txt)}</w:t></w:r></w:p></w:tc>`;
+  const cell = (txt, w) => `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/><w:tcMar><w:top w:w="80" w:type="dxa"/><w:bottom w:w="80" w:type="dxa"/><w:left w:w="120" w:type="dxa"/><w:right w:w="120" w:type="dxa"/></w:tcMar></w:tcPr><w:p><w:r><w:t xml:space="preserve">${esc(txt)}</w:t></w:r></w:p></w:tc>`;
+
+  const headerRow = `<w:tr><w:trPr><w:trStyle w:val="TableRow"/></w:trPr>${boldCell('Kolo',800)}${boldCell('Datum',2200)}${boldCell('Čas',900)}${boldCell('Zápas',5400)}</w:tr>`;
+
+  const dataRows = matches.map(m => {
+    const dateFmt = m.date ? (() => {
+      const d = new Date(m.date);
+      return d.toLocaleDateString('cs-CZ', {day:'numeric', month:'numeric', year:'numeric', weekday:'long'});
+    })() : '—';
+    const icon = m.spartaIsHome ? '🏠 DOMA' : '✈️ VENKU';
+    const matchStr = m.spartaIsHome
+      ? `${m.homeTeam} vs ${m.awayTeam} ${icon}`
+      : `${m.homeTeam} vs ${m.awayTeam} ${icon}`;
+    return `<w:tr>${cell(String(m.number||''),800)}${cell(dateFmt,2200)}${cell(m.time||'—',900)}${cell(matchStr,5400)}</w:tr>`;
+  }).join('');
+
+  const bodyXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas"
+  xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+  xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">
+<w:body>
+<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="32"/></w:rPr><w:t>${esc(teamName)}</w:t></w:r></w:p>
+<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:t>Rozpis zápasů</w:t></w:r></w:p>
+<w:p><w:r><w:t></w:t></w:r></w:p>
+<w:tbl>
+  <w:tblPr>
+    <w:tblStyle w:val="TableGrid"/>
+    <w:tblW w:w="9300" w:type="dxa"/>
+    <w:tblBorders>
+      <w:top w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+      <w:left w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+      <w:bottom w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+      <w:right w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+      <w:insideH w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+      <w:insideV w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+    </w:tblBorders>
+  </w:tblPr>
+  <w:tblGrid><w:gridCol w:w="800"/><w:gridCol w:w="2200"/><w:gridCol w:w="900"/><w:gridCol w:w="5400"/></w:tblGrid>
+  ${headerRow}${dataRows}
+</w:tbl>
+<w:sectPr/>
+</w:body></w:document>`;
+
+  const relsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`;
+
+  const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:style w:type="table" w:styleId="TableGrid"><w:name w:val="Table Grid"/></w:style>
+</w:styles>`;
+
+  const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+</Types>`;
+
+  const rootRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+
+  const zip = new JSZip();
+  zip.file('[Content_Types].xml', contentTypes);
+  zip.file('_rels/.rels', rootRels);
+  zip.file('word/document.xml', bodyXml);
+  zip.file('word/_rels/document.xml.rels', relsXml);
+  zip.file('word/styles.xml', stylesXml);
+
+  const blob = await zip.generateAsync({type:'blob', mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const d = new Date();
+  a.download = `zapasy_${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}.docx`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ==================== IMPORT / EXPORT ====================
