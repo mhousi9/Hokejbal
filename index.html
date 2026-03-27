@@ -3040,15 +3040,92 @@ renderHome();
   }
 
   // ── Fuse matching ──────────────────────────────────────────
+  const STRICT_THR = 0.2;   // max fuse score (0=perfekt, 1=nic)
+  const AMBIG_GAP  = 0.10;  // pokud jsou 2 vysledky do GAP od sebe -> ambiguous
+
+  function makeFuse(players) {
+    return new Fuse(players, {
+      keys: ['normName'],
+      threshold: STRICT_THR,
+      includeScore: true,
+      minMatchCharLength: 3,
+      ignoreLocation: true,
+      distance: 60
+    });
+  }
+
+  // Delkovy pomer: mluvene slovo musi pokryvat aspon 72 % delky tokenu prijmeni
+  function lengthOk(word, player) {
+    return player.normName.split(' ').some(part => {
+      if (part.length < 3) return false;
+      const lo = Math.min(word.length, part.length);
+      const hi = Math.max(word.length, part.length);
+      return lo / hi >= 0.72;
+    });
+  }
+
+  // Vrati { matched: Player[], ambiguous: {word, candidates}[] }
   function matchPlayers(text) {
     const players = getPlayers();
-    if (!players.length) return [];
-    const fuse = new Fuse(players, { keys: ['normName'], threshold: 0.4, includeScore: true, minMatchCharLength: 3 });
-    const found = new Map();
-    norm(text).split(' ').filter(w => w.length >= 3).forEach(w =>
-      fuse.search(w).forEach(r => { if (!found.has(r.item.id)) found.set(r.item.id, r.item); })
-    );
-    return Array.from(found.values());
+    if (!players.length) return { matched: [], ambiguous: [] };
+    const words = norm(text).split(' ').filter(w => w.length >= 3);
+    if (!words.length) return { matched: [], ambiguous: [] };
+
+    const fuse = makeFuse(players);
+    const matchedIds = new Set();
+    const matched = [];
+    const ambiguous = [];
+    const usedIdx = new Set();
+
+    // Zkus nejprve celou frazi (zachyti "Novotny Jan")
+    const fullHits = fuse.search(norm(text)).filter(h => h.score < 0.12 && lengthOk(norm(text), h.item));
+    if (fullHits.length === 1) {
+      matched.push(fullHits[0].item);
+      return { matched, ambiguous };
+    }
+
+    for (let wi = 0; wi < words.length; wi++) {
+      if (usedIdx.has(wi)) continue;
+      const word = words[wi];
+
+      // Zkus dvouslovnou kombinaci (prijmeni + jmeno)
+      if (wi + 1 < words.length && !usedIdx.has(wi + 1)) {
+        const two = word + ' ' + words[wi + 1];
+        const twoHits = fuse.search(two).filter(h => h.score < STRICT_THR && lengthOk(two, h.item));
+        if (twoHits.length === 1 && !matchedIds.has(twoHits[0].item.id)) {
+          matched.push(twoHits[0].item);
+          matchedIds.add(twoHits[0].item.id);
+          usedIdx.add(wi); usedIdx.add(wi + 1);
+          wi++; continue;
+        }
+      }
+
+      // Jednoslovne hledani
+      const hits = fuse.search(word).filter(h => lengthOk(word, h.item));
+      if (!hits.length) continue;
+
+      const best = hits[0].score;
+      const top = hits.filter(h => h.score - best < AMBIG_GAP);
+
+      if (top.length === 1) {
+        if (!matchedIds.has(top[0].item.id)) {
+          matched.push(top[0].item);
+          matchedIds.add(top[0].item.id);
+        }
+      } else {
+        // Vice stejne dobrych kandidatu -> nerozhodne
+        const cands = top.map(h => h.item).filter(p => !matchedIds.has(p.id));
+        if (cands.length === 1) {
+          matched.push(cands[0]);
+          matchedIds.add(cands[0].id);
+        } else if (cands.length > 1) {
+          ambiguous.push({ word, candidates: cands });
+        }
+      }
+      usedIdx.add(wi);
+    }
+
+    return { matched, ambiguous };
   }
 
   // ── UI ─────────────────────────────────────────────────────
@@ -3061,6 +3138,36 @@ renderHome();
     if (el.children.length >= 6) el.removeChild(el.firstChild);
     const d = document.createElement('div');
     d.textContent = txt; d.style.color = color || '#444';
+    el.appendChild(d);
+  }
+
+  // Zobrazi nejednoznacne shody jako klikatelna tlacitka
+  function logAmbiguous(word, candidates) {
+    const el = document.getElementById('voiceLog');
+    if (el.children.length >= 6) el.removeChild(el.firstChild);
+    const d = document.createElement('div');
+    d.style.cssText = 'color:#f59e0b;line-height:2;display:flex;flex-wrap:wrap;align-items:center;gap:4px;';
+
+    const lbl = document.createElement('span');
+    lbl.textContent = '⚠️ "' + word + '" — kdo?';
+    d.appendChild(lbl);
+
+    candidates.forEach(p => {
+      const btn = document.createElement('button');
+      btn.textContent = p.name;
+      btn.style.cssText = "background:#fff3cd;border:1px solid #f59e0b;border-radius:14px;padding:2px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Barlow Condensed',sans-serif;color:#7a5c1a;letter-spacing:0.3px;white-space:nowrap;";
+      btn.onclick = () => {
+        if (!addedIds.has(p.id)) {
+          window.togglePresence?.(p.id, 'present');
+          addedIds.add(p.id);
+        }
+        d.innerHTML = '';
+        d.style.color = '#22c55e';
+        d.textContent = '✅ ' + p.name;
+      };
+      d.appendChild(btn);
+    });
+
     el.appendChild(d);
   }
   function setMicActive(on) {
@@ -3098,16 +3205,14 @@ renderHome();
     };
 
     recog.onresult = (event) => {
-      // Projdeme všechny alternativy každého výsledku
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
         if (!result.isFinal) continue;
 
-        // Zkusíme všechny alternativy — bereme tu s nejlepší shodou
-        let bestMatches = [];
+        // Projdeme vsechny alternativy, vybereme nejlepsi
+        let best = { matched: [], ambiguous: [] };
         for (let a = 0; a < result.length; a++) {
           const txt = result[a].transcript;
-          // "Konec" → ukončit
           if (norm(txt).match(/\bkonec\b|\bhotovo\b/)) {
             stopListening();
             document.querySelectorAll('#match-players-list .pcitem').forEach(item => {
@@ -3118,20 +3223,30 @@ renderHome();
             return;
           }
           const m = matchPlayers(txt);
-          if (m.length > bestMatches.length) bestMatches = m;
+          // Prednost: vic jednoznacnych shod; pri rovnosti mene nejednoznacnych
+          if (m.matched.length > best.matched.length ||
+              (m.matched.length === best.matched.length && m.ambiguous.length < best.ambiguous.length)) {
+            best = m;
+          }
         }
 
-        // Odfiltrovat již přidané
-        const fresh = bestMatches.filter(p => !addedIds.has(p.id));
+        const { matched, ambiguous } = best;
+
+        // Jednoznacne shody
+        const fresh = matched.filter(p => !addedIds.has(p.id));
+        fresh.forEach(p => {
+          window.togglePresence?.(p.id, 'present');
+          addedIds.add(p.id);
+        });
         if (fresh.length > 0) {
-          fresh.forEach(p => {
-            window.togglePresence?.(p.id, 'present');
-            addedIds.add(p.id);
-          });
           logLine('✅ ' + fresh.map(p => p.name).join(', '), '#22c55e');
-        } else if (bestMatches.length === 0) {
-          const raw = result[0].transcript.trim();
-          logLine('❓ "' + raw + '"', '#f59e0b');
+        }
+
+        // Nejednoznacne — zobraz tlacitka
+        ambiguous.forEach(({ word, candidates }) => logAmbiguous(word, candidates));
+
+        if (fresh.length === 0 && ambiguous.length === 0) {
+          logLine('❓ "' + result[0].transcript.trim() + '"', '#f59e0b');
         }
       }
     };
@@ -3139,7 +3254,15 @@ renderHome();
     recog.onerror = (e) => {
       if (e.error === 'no-speech') return; // ignorovat ticho
       if (e.error === 'aborted') return;
-      setStatus('❌ ' + e.error, '#e8433a');
+      const _errMsgs = {
+        'not-allowed':           '🔒 Mikrofon není povolen — povolte přístup v nastavení prohlížeče',
+        'audio-capture':         '🎤 Mikrofon nenalezen — zkontrolujte zařízení',
+        'network':               '🌐 Chyba sítě — hlasové rozpoznávání vyžaduje připojení',
+        'service-not-allowed':   '🔒 Hlasové rozpoznávání není povoleno',
+        'bad-grammar':           '⚠️ Chyba gramatiky rozpoznávání',
+        'language-not-supported':'⚠️ Jazyk není podporován',
+      };
+      setStatus(_errMsgs[e.error] || ('❌ Chyba: ' + e.error), '#e8433a');
       listening = false; setMicActive(false);
     };
 
