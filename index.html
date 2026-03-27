@@ -209,7 +209,6 @@ hr.divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
   <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
     <input class="input" style="width:220px;" id="player-filter" placeholder="Hledat hráče..." oninput="renderPlayersTable()">
 <button class="btn btn-primary" onclick="openModal('modal-add-player')">+ Přidat hráče</button>
-<button class="btn btn-danger btn-sm" onclick="openDebtExport()" style="margin-left:auto;">📸 Export dluhů</button>
   </div>
   <div class="card" style="padding:0;overflow:hidden;">
     <div class="tbl-wrap">
@@ -223,30 +222,6 @@ hr.divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
   <div class="card" style="margin-top:16px;">
     <div class="card-title" style="margin-bottom:14px;">🎽 Dresy — přehled</div>
     <div id="jerseys-summary"></div>
-  </div>
-</div>
-
-<!-- MODAL: DEBT EXPORT -->
-<div id="modal-debt-export" class="overlay" style="display:none;" onclick="if(event.target===this)closeModal('modal-debt-export')">
-  <div class="modal" style="max-width:520px;">
-    <div class="modal-title">📸 Export dluhů</div>
-    <div style="color:var(--muted);font-size:13px;margin-bottom:14px;">Vyber hráče, kteří budou v exportu. Výsledek stáhneš jako JPG — otevře ho každý telefon i počítač.</div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-      <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);" id="debt-export-count"></span>
-      <div style="display:flex;gap:6px;">
-        <button class="btn btn-ghost btn-sm" onclick="debtExportSelectAll()">Všichni</button>
-        <button class="btn btn-ghost btn-sm" onclick="debtExportSelectNone()">Žádný</button>
-      </div>
-    </div>
-    <div class="pclist" id="debt-export-list" style="max-height:300px;"></div>
-    <div style="margin-top:14px;padding:10px 12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
-      <label class="form-label" style="margin-bottom:6px;">Nadpis obrázku (volitelné)</label>
-      <input class="input" id="debt-export-title" placeholder="např. Dluhy hráčů — Sezóna 25/26">
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('modal-debt-export')">Zrušit</button>
-      <button class="btn btn-danger" onclick="generateDebtJPG()">⬇️ Stáhnout JPG</button>
-    </div>
   </div>
 </div>
 
@@ -443,15 +418,14 @@ hr.divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
 
   <div class="card">
     <div class="card-title">💾 Export a Import dat</div>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Záloha dat pro případ ztráty nebo přesunu na jiné zařízení. Exportovaný soubor obsahuje hráče, sezóny, zápasy, finance i logo.</p>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-      <button class="btn btn-primary" id="export-btn" onclick="exportData()">📥 Exportovat data (JSON)</button>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Záloha dat pro případ ztráty nebo přesunu na jiné zařízení. Exportovaný soubor obsahuje hráče, sezóny, zápasy a finance.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="exportData()">📥 Exportovat data (JSON)</button>
       <label class="btn btn-secondary" style="cursor:pointer;">
         📤 Importovat data
         <input type="file" id="import-file-input" accept=".json" style="display:none;" onchange="importData(event)">
       </label>
     </div>
-    <div id="export-status" style="margin-top:10px;font-size:13px;"></div>
     <div id="import-status" style="margin-top:10px;font-size:13px;"></div>
   </div>
 
@@ -2108,74 +2082,16 @@ async function exportScheduleDocx() {
 }
 
 // ==================== IMPORT / EXPORT ====================
-async function exportData() {
-  const btn = document.getElementById('export-btn');
-  const st = document.getElementById('export-status');
-  const d = new Date();
-  const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  const fileName = `hokejbal_export_${dateStr}.json`;
-
-  // Include logo in export
-  const exportObj = { state, appSettings: {...appSettings} };
-  const json = JSON.stringify(exportObj, null, 2);
-  const blob = new Blob([json], {type:'application/json'});
-
-  // Try File System Access API (Chromium / Android Chrome)
-  if (window.showSaveFilePicker) {
-    try {
-      btn.disabled = true;
-      btn.textContent = '⏳ Ukládám...';
-      const handle = await window.showSaveFilePicker({
-        suggestedName: fileName,
-        types: [{ description: 'JSON záloha', accept: {'application/json': ['.json']} }]
-      });
-      const writable = await handle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-      showExportSuccess(st, handle.name || fileName);
-    } catch(err) {
-      if (err.name !== 'AbortError') {
-        st.innerHTML = '<span style="color:var(--red);">❌ Chyba při ukládání: ' + err.message + '</span>';
-      }
-    } finally {
-      btn.disabled = false;
-      btn.textContent = '📥 Exportovat data (JSON)';
-    }
-    return;
-  }
-
-  // Fallback — klasické stažení do složky Stažené
+function exportData() {
+  const exportObj = { state, appSettings: {...appSettings, logoSrc: undefined} };
+  const blob = new Blob([JSON.stringify(exportObj, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = fileName;
+  a.href = url;
+  const d = new Date();
+  a.download = `hokejbal_export_${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}.json`;
   a.click();
   URL.revokeObjectURL(url);
-  showExportSuccess(st, fileName);
-}
-
-function showExportSuccess(el, fileName) {
-  el.innerHTML = `<span style="color:var(--green2);">✅ Export uložen: <strong>${fileName}</strong></span>`;
-  // Also show a floating toast
-  showToast('✅ Export uložen');
-  setTimeout(() => { el.innerHTML = ''; }, 8000);
-}
-
-function showToast(msg) {
-  let t = document.getElementById('app-toast');
-  if (!t) {
-    t = document.createElement('div');
-    t.id = 'app-toast';
-    t.style.cssText = 'position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:#1c2b1e;color:#fff;font-family:\'Barlow Condensed\',sans-serif;font-size:15px;font-weight:700;letter-spacing:0.5px;padding:10px 22px;border-radius:30px;box-shadow:0 4px 20px rgba(0,0,0,0.25);z-index:9999;opacity:0;transition:opacity 0.25s,transform 0.25s;pointer-events:none;';
-    document.body.appendChild(t);
-  }
-  t.textContent = msg;
-  t.style.opacity = '1';
-  t.style.transform = 'translateX(-50%) translateY(0)';
-  clearTimeout(t._hide);
-  t._hide = setTimeout(() => {
-    t.style.opacity = '0';
-    t.style.transform = 'translateX(-50%) translateY(20px)';
-  }, 3000);
 }
 function importData(event) {
   const file = event.target.files[0];
@@ -2196,8 +2112,7 @@ function importData(event) {
         applySettings();
       }
       saveState(); saveSettings();
-      st.innerHTML = `<span style="color:var(--green2);">✅ Import úspěšný — ${state.players.length} hráčů, ${state.seasons.length} sezón načteno.</span>`;
-      showToast('✅ Import úspěšný');
+      st.innerHTML = `<span style="color:var(--green2);">✓ Import úspěšný — ${state.players.length} hráčů, ${state.seasons.length} sezón načteno.</span>`;
       initSettings();
     } catch(err) {
       st.innerHTML = '<span style="color:var(--red);">❌ Chyba při čtení souboru: ' + err.message + '</span>';
@@ -2683,336 +2598,6 @@ function deleteFee() {
   renderPlayerPage();
 }
 
-
-// ==================== DEBT EXPORT ====================
-let debtExportSelected = new Set();
-
-function getPlayerDebtBreakdown(pid) {
-  // Returns { totalDebt, seasons: [{name, feeDebt, items:[{name,remaining}]}] }
-  const result = { totalDebt: 0, seasons: [] };
-  state.seasons.forEach(s => {
-    const fee = getFee(pid, s.id);
-    const feeDebt = fee ? Math.max(0, fee.amount - fee.paid) : 0;
-    const items = getPlayerItems(pid, s.id).map(item => ({
-      name: item.name,
-      remaining: Math.max(0, item.amount - item.paid)
-    })).filter(i => i.remaining > 0);
-    const seasonDebt = feeDebt + items.reduce((a, i) => a + i.remaining, 0);
-    if (seasonDebt > 0) {
-      result.seasons.push({ name: s.name, feeDebt, items });
-      result.totalDebt += seasonDebt;
-    }
-  });
-  return result;
-}
-
-function getSortedDebtPlayers() {
-  // Returns players sorted same as current playerSort, but only those with debt
-  const filter = (document.getElementById('player-filter')||{}).value||'';
-  const sort = playerSort;
-  let players = state.players.filter(p => p.name.toLowerCase().includes(filter.toLowerCase()));
-  if (sort === 'debt') {
-    players.sort((a,b) => playerTotalDebt(b.id) - playerTotalDebt(a.id));
-  } else if (sort === 'pos') {
-    const posOrder = {'Brankář':0,'Obránce':1,'Útočník':2};
-    players.sort((a,b) => {
-      const ao = a.pos!=null ? (posOrder[a.pos]??3) : 4;
-      const bo = b.pos!=null ? (posOrder[b.pos]??3) : 4;
-      return ao!==bo ? ao-bo : a.name.localeCompare(b.name);
-    });
-  } else {
-    players.sort((a,b) => sort==='name' ? a.name.localeCompare(b.name) : (a.number||0)-(b.number||0));
-  }
-  return players.filter(p => playerTotalDebt(p.id) > 0);
-}
-
-function openDebtExport() {
-  const players = getSortedDebtPlayers();
-  debtExportSelected = new Set(players.map(p => p.id));
-  renderDebtExportList();
-  openModal('modal-debt-export');
-}
-
-function renderDebtExportList() {
-  const players = getSortedDebtPlayers();
-  const list = document.getElementById('debt-export-list');
-  const countEl = document.getElementById('debt-export-count');
-  countEl.textContent = `${debtExportSelected.size} / ${players.length} vybráno`;
-  if (players.length === 0) {
-    list.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px;">Žádný hráč nemá dluh.</div>';
-    return;
-  }
-  list.innerHTML = players.map(p => {
-    const debt = playerTotalDebt(p.id);
-    const checked = debtExportSelected.has(p.id);
-    return `<div class="pcitem${checked?' cp':''}" onclick="toggleDebtExportPlayer('${p.id}')" style="cursor:pointer;">
-      <div class="chkbox${checked?' p':''}">
-        ${checked ? '✓' : ''}
-      </div>
-      <span style="flex:1;font-weight:600;">${p.name}</span>
-      <span style="color:var(--red2);font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:14px;">−${debt.toLocaleString('cs')} Kč</span>
-    </div>`;
-  }).join('');
-}
-
-function toggleDebtExportPlayer(pid) {
-  if (debtExportSelected.has(pid)) debtExportSelected.delete(pid);
-  else debtExportSelected.add(pid);
-  renderDebtExportList();
-}
-
-function debtExportSelectAll() {
-  getSortedDebtPlayers().forEach(p => debtExportSelected.add(p.id));
-  renderDebtExportList();
-}
-
-function debtExportSelectNone() {
-  debtExportSelected.clear();
-  renderDebtExportList();
-}
-
-function generateDebtJPG() {
-  const players = getSortedDebtPlayers().filter(p => debtExportSelected.has(p.id));
-  if (players.length === 0) { alert('Nevybral jsi žádného hráče.'); return; }
-
-  const title = document.getElementById('debt-export-title').value.trim() || (appSettings.name || 'Hokejbal') + ' — Přehled dluhů';
-  const appName = appSettings.name || 'Hokejbal';
-
-  // ── Canvas sizing ──────────────────────────────────────────
-  const W = 800;
-  const PAD = 36;
-  const COL = W - PAD * 2;
-  const HEADER_H = 80;
-  const FOOTER_H = 44;
-  const ROW_BASE = 56; // min row height per player
-  const LINE_H = 23;   // extra line per detail item
-
-  // Pre-compute breakdowns
-  const breakdowns = players.map(p => ({ p, bd: getPlayerDebtBreakdown(p.id) }));
-
-  // Calculate total height
-  let bodyH = 16;
-  breakdowns.forEach(({ bd }) => {
-    // Count extra lines: if >1 season OR has items → show detail
-    const hasDetail = bd.seasons.length > 1 || bd.seasons.some(s => s.items.length > 0 || (bd.seasons.length === 1 && bd.seasons[0].feeDebt > 0 && bd.seasons[0].items.length > 0));
-    let extraLines = 0;
-    if (hasDetail) {
-      bd.seasons.forEach(s => {
-        extraLines++; // season name line
-        if (s.feeDebt > 0) extraLines++;
-        extraLines += s.items.length;
-      });
-    }
-    bodyH += ROW_BASE + extraLines * LINE_H + 12;
-  });
-  bodyH += 16;
-  const H = HEADER_H + bodyH + FOOTER_H;
-
-  const canvas = document.createElement('canvas');
-  canvas.width = W * 2; canvas.height = H * 2; // 2x for retina sharpness
-  const ctx = canvas.getContext('2d');
-  ctx.scale(2, 2);
-
-  const _doRender = (logoImg) => {
-
-  // ── Background ────────────────────────────────────────────
-  ctx.fillStyle = '#f3f6f3';
-  ctx.fillRect(0, 0, W, H);
-
-  // ── Header bar ────────────────────────────────────────────
-  ctx.fillStyle = '#0f1a10';
-  ctx.fillRect(0, 0, W, HEADER_H);
-  // Red accent line
-  ctx.fillStyle = '#e63946';
-  ctx.fillRect(0, HEADER_H - 3, W, 3);
-
-  // Logo
-  const LOGO_SIZE = 44;
-  const LOGO_X = PAD;
-  const LOGO_Y = Math.round((HEADER_H - 3 - LOGO_SIZE) / 2);
-  const TEXT_X = logoImg ? PAD + LOGO_SIZE + 10 : PAD;
-  if (logoImg) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(LOGO_X + LOGO_SIZE / 2, LOGO_Y + LOGO_SIZE / 2, LOGO_SIZE / 2, 0, Math.PI * 2);
-    ctx.clip();
-    ctx.drawImage(logoImg, LOGO_X, LOGO_Y, LOGO_SIZE, LOGO_SIZE);
-    ctx.restore();
-  }
-
-  // App name
-  ctx.fillStyle = '#f8fafc';
-  ctx.font = 'bold 13px Arial';
-  ctx.fillText(appName.toUpperCase(), TEXT_X, 28);
-  // Title
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 22px Arial';
-  ctx.fillText(title, TEXT_X, 56);
-  // Date top-right
-  const now = new Date();
-  const dateStr = now.toLocaleDateString('cs-CZ');
-  ctx.fillStyle = '#8fa88f';
-  ctx.font = '11px Arial';
-  ctx.textAlign = 'right';
-  ctx.fillText(dateStr, W - PAD, 28);
-  ctx.textAlign = 'left';
-
-  // ── Player rows ───────────────────────────────────────────
-  let y = HEADER_H + 16;
-  breakdowns.forEach(({ p, bd }, idx) => {
-    const hasDetail = bd.seasons.length > 1 || bd.seasons.some(s => s.items.length > 0);
-    let extraLines = 0;
-    if (hasDetail) {
-      bd.seasons.forEach(s => {
-        extraLines++;
-        if (s.feeDebt > 0) extraLines++;
-        extraLines += s.items.length;
-      });
-    }
-    const rowH = ROW_BASE + extraLines * LINE_H;
-
-    // Card background
-    ctx.fillStyle = '#ffffff';
-    roundRect(ctx, PAD, y, COL, rowH, 8);
-    ctx.fill();
-    // Left accent bar
-    ctx.fillStyle = '#e63946';
-    roundRect(ctx, PAD, y, 4, rowH, 2);
-    ctx.fill();
-
-    // Player name
-    ctx.fillStyle = '#1c2b1e';
-    ctx.font = 'bold 17px Arial';
-    ctx.fillText(p.name, PAD + 16, y + 22);
-
-    // Total debt (right)
-    const debtStr = '−' + bd.totalDebt.toLocaleString('cs') + ' Kč';
-    ctx.fillStyle = '#c1121f';
-    ctx.font = 'bold 18px Arial';
-    ctx.textAlign = 'right';
-    ctx.fillText(debtStr, W - PAD - 8, y + 22);
-    ctx.textAlign = 'left';
-
-    // Divider
-    ctx.strokeStyle = '#dde5dd';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(PAD + 16, y + 32);
-    ctx.lineTo(W - PAD - 8, y + 32);
-    ctx.stroke();
-
-    // Detail lines
-    if (hasDetail) {
-      let dy = y + 32 + 14;
-      bd.seasons.forEach(s => {
-        // Season name
-        ctx.fillStyle = '#6b7d6e';
-        ctx.font = 'bold 13px Arial';
-        ctx.fillText(s.name.toUpperCase(), PAD + 16, dy);
-        dy += LINE_H;
-        // Fee debt
-        if (s.feeDebt > 0) {
-          ctx.fillStyle = '#444';
-          ctx.font = '14px Arial';
-          ctx.fillText('Poplatek', PAD + 26, dy);
-          ctx.fillStyle = '#c1121f';
-          ctx.textAlign = 'right';
-          ctx.fillText('−' + s.feeDebt.toLocaleString('cs') + ' Kč', W - PAD - 8, dy);
-          ctx.textAlign = 'left';
-          dy += LINE_H;
-        }
-        // Items
-        s.items.forEach(item => {
-          ctx.fillStyle = '#444';
-          ctx.font = '14px Arial';
-          ctx.fillText(item.name, PAD + 26, dy);
-          ctx.fillStyle = '#c1121f';
-          ctx.textAlign = 'right';
-          ctx.fillText('−' + item.remaining.toLocaleString('cs') + ' Kč', W - PAD - 8, dy);
-          ctx.textAlign = 'left';
-          dy += LINE_H;
-        });
-      });
-    } else {
-      // Single season, no breakdown needed — show season name only if it has items
-      const s = bd.seasons[0];
-      if (s && s.items.length > 0) {
-        let dy = y + 32 + 14;
-        ctx.fillStyle = '#6b7d6e';
-        ctx.font = 'bold 13px Arial';
-        ctx.fillText(s.name.toUpperCase(), PAD + 16, dy);
-        dy += LINE_H;
-        if (s.feeDebt > 0) {
-          ctx.fillStyle = '#444'; ctx.font = '14px Arial';
-          ctx.fillText('Poplatek', PAD + 26, dy);
-          ctx.fillStyle = '#c1121f'; ctx.textAlign = 'right';
-          ctx.fillText('−' + s.feeDebt.toLocaleString('cs') + ' Kč', W - PAD - 8, dy);
-          ctx.textAlign = 'left'; dy += LINE_H;
-        }
-        s.items.forEach(item => {
-          ctx.fillStyle = '#444'; ctx.font = '14px Arial';
-          ctx.fillText(item.name, PAD + 26, dy);
-          ctx.fillStyle = '#c1121f'; ctx.textAlign = 'right';
-          ctx.fillText('−' + item.remaining.toLocaleString('cs') + ' Kč', W - PAD - 8, dy);
-          ctx.textAlign = 'left'; dy += LINE_H;
-        });
-      } else if (s) {
-        // Just show season name small
-        ctx.fillStyle = '#aaa'; ctx.font = '11px Arial';
-        ctx.fillText(s.name, PAD + 16, y + 46);
-      }
-    }
-
-    y += rowH + 12;
-  });
-
-  // ── Footer ────────────────────────────────────────────────
-  ctx.fillStyle = '#0f1a10';
-  ctx.fillRect(0, H - FOOTER_H, W, FOOTER_H);
-  ctx.fillStyle = '#8fa88f'; ctx.font = '11px Arial';
-  const totalAllDebt = breakdowns.filter(({p}) => debtExportSelected.has(p.id))
-    .reduce((a, {bd}) => a + bd.totalDebt, 0);
-  ctx.fillText(`${players.length} hráčů · Celkem dluhů: ${totalAllDebt.toLocaleString('cs')} Kč`, PAD, H - FOOTER_H + 26);
-
-  // ── Download ──────────────────────────────────────────────
-  canvas.toBlob(blob => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'dluhy_hracu.jpg';
-    a.click();
-    URL.revokeObjectURL(url);
-    closeModal('modal-debt-export');
-  }, 'image/jpeg', 0.93);
-
-  }; // end _doRender
-
-  // Load logo then render
-  const _logoSrc = appSettings.logoSrc;
-  if (_logoSrc) {
-    const _logoImg = new Image();
-    _logoImg.onload = () => _doRender(_logoImg);
-    _logoImg.onerror = () => _doRender(null);
-    _logoImg.src = _logoSrc;
-  } else {
-    _doRender(null);
-  }
-}
-
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-}
-
 // ==================== INIT ====================
 loadAll();
 applySettings();
@@ -3040,92 +2625,15 @@ renderHome();
   }
 
   // ── Fuse matching ──────────────────────────────────────────
-  const STRICT_THR = 0.2;   // max fuse score (0=perfekt, 1=nic)
-  const AMBIG_GAP  = 0.10;  // pokud jsou 2 vysledky do GAP od sebe -> ambiguous
-
-  function makeFuse(players) {
-    return new Fuse(players, {
-      keys: ['normName'],
-      threshold: STRICT_THR,
-      includeScore: true,
-      minMatchCharLength: 3,
-      ignoreLocation: true,
-      distance: 60
-    });
-  }
-
-  // Delkovy pomer: mluvene slovo musi pokryvat aspon 72 % delky tokenu prijmeni
-  function lengthOk(word, player) {
-    return player.normName.split(' ').some(part => {
-      if (part.length < 3) return false;
-      const lo = Math.min(word.length, part.length);
-      const hi = Math.max(word.length, part.length);
-      return lo / hi >= 0.72;
-    });
-  }
-
-  // Vrati { matched: Player[], ambiguous: {word, candidates}[] }
   function matchPlayers(text) {
     const players = getPlayers();
-    if (!players.length) return { matched: [], ambiguous: [] };
-    const words = norm(text).split(' ').filter(w => w.length >= 3);
-    if (!words.length) return { matched: [], ambiguous: [] };
-
-    const fuse = makeFuse(players);
-    const matchedIds = new Set();
-    const matched = [];
-    const ambiguous = [];
-    const usedIdx = new Set();
-
-    // Zkus nejprve celou frazi (zachyti "Novotny Jan")
-    const fullHits = fuse.search(norm(text)).filter(h => h.score < 0.12 && lengthOk(norm(text), h.item));
-    if (fullHits.length === 1) {
-      matched.push(fullHits[0].item);
-      return { matched, ambiguous };
-    }
-
-    for (let wi = 0; wi < words.length; wi++) {
-      if (usedIdx.has(wi)) continue;
-      const word = words[wi];
-
-      // Zkus dvouslovnou kombinaci (prijmeni + jmeno)
-      if (wi + 1 < words.length && !usedIdx.has(wi + 1)) {
-        const two = word + ' ' + words[wi + 1];
-        const twoHits = fuse.search(two).filter(h => h.score < STRICT_THR && lengthOk(two, h.item));
-        if (twoHits.length === 1 && !matchedIds.has(twoHits[0].item.id)) {
-          matched.push(twoHits[0].item);
-          matchedIds.add(twoHits[0].item.id);
-          usedIdx.add(wi); usedIdx.add(wi + 1);
-          wi++; continue;
-        }
-      }
-
-      // Jednoslovne hledani
-      const hits = fuse.search(word).filter(h => lengthOk(word, h.item));
-      if (!hits.length) continue;
-
-      const best = hits[0].score;
-      const top = hits.filter(h => h.score - best < AMBIG_GAP);
-
-      if (top.length === 1) {
-        if (!matchedIds.has(top[0].item.id)) {
-          matched.push(top[0].item);
-          matchedIds.add(top[0].item.id);
-        }
-      } else {
-        // Vice stejne dobrych kandidatu -> nerozhodne
-        const cands = top.map(h => h.item).filter(p => !matchedIds.has(p.id));
-        if (cands.length === 1) {
-          matched.push(cands[0]);
-          matchedIds.add(cands[0].id);
-        } else if (cands.length > 1) {
-          ambiguous.push({ word, candidates: cands });
-        }
-      }
-      usedIdx.add(wi);
-    }
-
-    return { matched, ambiguous };
+    if (!players.length) return [];
+    const fuse = new Fuse(players, { keys: ['normName'], threshold: 0.4, includeScore: true, minMatchCharLength: 3 });
+    const found = new Map();
+    norm(text).split(' ').filter(w => w.length >= 3).forEach(w =>
+      fuse.search(w).forEach(r => { if (!found.has(r.item.id)) found.set(r.item.id, r.item); })
+    );
+    return Array.from(found.values());
   }
 
   // ── UI ─────────────────────────────────────────────────────
@@ -3138,36 +2646,6 @@ renderHome();
     if (el.children.length >= 6) el.removeChild(el.firstChild);
     const d = document.createElement('div');
     d.textContent = txt; d.style.color = color || '#444';
-    el.appendChild(d);
-  }
-
-  // Zobrazi nejednoznacne shody jako klikatelna tlacitka
-  function logAmbiguous(word, candidates) {
-    const el = document.getElementById('voiceLog');
-    if (el.children.length >= 6) el.removeChild(el.firstChild);
-    const d = document.createElement('div');
-    d.style.cssText = 'color:#f59e0b;line-height:2;display:flex;flex-wrap:wrap;align-items:center;gap:4px;';
-
-    const lbl = document.createElement('span');
-    lbl.textContent = '⚠️ "' + word + '" — kdo?';
-    d.appendChild(lbl);
-
-    candidates.forEach(p => {
-      const btn = document.createElement('button');
-      btn.textContent = p.name;
-      btn.style.cssText = "background:#fff3cd;border:1px solid #f59e0b;border-radius:14px;padding:2px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Barlow Condensed',sans-serif;color:#7a5c1a;letter-spacing:0.3px;white-space:nowrap;";
-      btn.onclick = () => {
-        if (!addedIds.has(p.id)) {
-          window.togglePresence?.(p.id, 'present');
-          addedIds.add(p.id);
-        }
-        d.innerHTML = '';
-        d.style.color = '#22c55e';
-        d.textContent = '✅ ' + p.name;
-      };
-      d.appendChild(btn);
-    });
-
     el.appendChild(d);
   }
   function setMicActive(on) {
@@ -3205,14 +2683,16 @@ renderHome();
     };
 
     recog.onresult = (event) => {
+      // Projdeme všechny alternativy každého výsledku
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
         if (!result.isFinal) continue;
 
-        // Projdeme vsechny alternativy, vybereme nejlepsi
-        let best = { matched: [], ambiguous: [] };
+        // Zkusíme všechny alternativy — bereme tu s nejlepší shodou
+        let bestMatches = [];
         for (let a = 0; a < result.length; a++) {
           const txt = result[a].transcript;
+          // "Konec" → ukončit
           if (norm(txt).match(/\bkonec\b|\bhotovo\b/)) {
             stopListening();
             document.querySelectorAll('#match-players-list .pcitem').forEach(item => {
@@ -3223,30 +2703,20 @@ renderHome();
             return;
           }
           const m = matchPlayers(txt);
-          // Prednost: vic jednoznacnych shod; pri rovnosti mene nejednoznacnych
-          if (m.matched.length > best.matched.length ||
-              (m.matched.length === best.matched.length && m.ambiguous.length < best.ambiguous.length)) {
-            best = m;
-          }
+          if (m.length > bestMatches.length) bestMatches = m;
         }
 
-        const { matched, ambiguous } = best;
-
-        // Jednoznacne shody
-        const fresh = matched.filter(p => !addedIds.has(p.id));
-        fresh.forEach(p => {
-          window.togglePresence?.(p.id, 'present');
-          addedIds.add(p.id);
-        });
+        // Odfiltrovat již přidané
+        const fresh = bestMatches.filter(p => !addedIds.has(p.id));
         if (fresh.length > 0) {
+          fresh.forEach(p => {
+            window.togglePresence?.(p.id, 'present');
+            addedIds.add(p.id);
+          });
           logLine('✅ ' + fresh.map(p => p.name).join(', '), '#22c55e');
-        }
-
-        // Nejednoznacne — zobraz tlacitka
-        ambiguous.forEach(({ word, candidates }) => logAmbiguous(word, candidates));
-
-        if (fresh.length === 0 && ambiguous.length === 0) {
-          logLine('❓ "' + result[0].transcript.trim() + '"', '#f59e0b');
+        } else if (bestMatches.length === 0) {
+          const raw = result[0].transcript.trim();
+          logLine('❓ "' + raw + '"', '#f59e0b');
         }
       }
     };
@@ -3254,15 +2724,7 @@ renderHome();
     recog.onerror = (e) => {
       if (e.error === 'no-speech') return; // ignorovat ticho
       if (e.error === 'aborted') return;
-      const _errMsgs = {
-        'not-allowed':           '🔒 Mikrofon není povolen — povolte přístup v nastavení prohlížeče',
-        'audio-capture':         '🎤 Mikrofon nenalezen — zkontrolujte zařízení',
-        'network':               '🌐 Chyba sítě — hlasové rozpoznávání vyžaduje připojení',
-        'service-not-allowed':   '🔒 Hlasové rozpoznávání není povoleno',
-        'bad-grammar':           '⚠️ Chyba gramatiky rozpoznávání',
-        'language-not-supported':'⚠️ Jazyk není podporován',
-      };
-      setStatus(_errMsgs[e.error] || ('❌ Chyba: ' + e.error), '#e8433a');
+      setStatus('❌ ' + e.error, '#e8433a');
       listening = false; setMicActive(false);
     };
 
