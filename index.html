@@ -208,7 +208,9 @@ hr.divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
   <div class="page-title">Hráči</div>
   <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
     <input class="input" style="width:220px;" id="player-filter" placeholder="Hledat hráče..." oninput="renderPlayersTable()">
-<button class="btn btn-primary" onclick="openModal('modal-add-player')">+ Přidat hráče</button>
+    <button id="player-debt-filter-btn" class="btn btn-secondary btn-sm" onclick="togglePlayerDebtFilter()" style="white-space:nowrap;">💳 Dluh</button>
+    <button id="generate-debt-jpg-btn" class="btn btn-primary btn-sm" onclick="openDebtJpgModal()" style="display:none;white-space:nowrap;">📷 Generovat JPG</button>
+    <button class="btn btn-primary" onclick="openModal('modal-add-player')" style="margin-left:auto;">+ Přidat hráče</button>
   </div>
   <div class="card" style="padding:0;overflow:hidden;">
     <div class="tbl-wrap">
@@ -432,6 +434,23 @@ hr.divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
 </div>
 
 </main>
+
+<!-- MODAL: DEBT JPG SELECTION -->
+<div id="modal-debt-jpg" class="overlay" style="display:none;" onclick="if(event.target===this)closeModal('modal-debt-jpg')">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title">📷 Generovat JPG dlužníků</div>
+    <div style="color:var(--muted);font-size:13px;margin-bottom:14px;">Vyber hráče, kteří se zobrazí ve vygenerovaném obrázku.</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <button class="btn btn-secondary btn-sm" onclick="debtJpgSelectAll()">✓ Vybrat vše</button>
+      <button class="btn btn-ghost btn-sm" onclick="debtJpgDeselectAll()">✕ Zrušit vše</button>
+    </div>
+    <div class="pclist" id="debt-jpg-player-list" style="max-height:360px;overflow-y:auto;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-debt-jpg')">Zrušit</button>
+      <button class="btn btn-primary" onclick="downloadDebtJpg()">📷 Vygenerovat</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL: EDIT MATCH -->
 <div id="modal-edit-match" class="overlay" style="display:none;" onclick="if(event.target===this)closeModal('modal-edit-match')">
@@ -2787,6 +2806,321 @@ renderHome();
     if (_orig) _orig.apply(this, arguments);
   };
 })();
+
+// ==================== DEBT JPG ====================
+let playerDebtFilterActive = false;
+let debtJpgPlayers = [];
+let debtJpgSelected = new Set();
+
+function togglePlayerDebtFilter() {
+  playerDebtFilterActive = !playerDebtFilterActive;
+  const btn = document.getElementById('player-debt-filter-btn');
+  if (btn) btn.className = 'btn btn-sm ' + (playerDebtFilterActive ? 'btn-primary' : 'btn-secondary');
+  renderPlayersTable();
+}
+
+// Patch renderPlayersTable to support debt filter + show/hide JPG button
+(function() {
+  const _origRender = renderPlayersTable;
+  window.renderPlayersTable = function() {
+    const filter = (document.getElementById('player-filter')||{}).value||'';
+    const sort = playerSort;
+    let players = state.players.filter(p=>p.name.toLowerCase().includes(filter.toLowerCase()));
+    if (playerDebtFilterActive) {
+      players = players.filter(p => playerTotalDebt(p.id) > 0);
+    }
+    if (sort === 'debt') {
+      players.sort((a,b) => playerTotalDebt(b.id) - playerTotalDebt(a.id));
+    } else if (sort === 'pos') {
+      const posOrder = {'Brankář':0,'Obránce':1,'Útočník':2};
+      players.sort((a,b) => {
+        const ao = a.pos!=null ? (posOrder[a.pos]??3) : 4;
+        const bo = b.pos!=null ? (posOrder[b.pos]??3) : 4;
+        return ao!==bo ? ao-bo : a.name.localeCompare(b.name);
+      });
+    } else {
+      players.sort((a,b) => sort==='name' ? a.name.localeCompare(b.name) : (a.number||0)-(b.number||0));
+    }
+    document.getElementById('players-tbody').innerHTML = players.map((p,i)=>{
+      const debt = playerTotalDebt(p.id);
+      const debtHtml = debt > 0
+        ? `<span style="color:var(--red2);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;">−${debt.toLocaleString('cs')} Kč</span>`
+        : ``;
+      return `<tr class="clk" onclick="openPlayer('${p.id}','players')">
+        <td style="color:var(--muted);font-size:12px;font-family:'Barlow Condensed',sans-serif;">${i+1}</td>
+        <td style="color:var(--dark);font-weight:600;">${p.name}</td>
+        <td>${playerNumBadge(p)}</td>
+        <td><span style="font-size:12px;color:var(--muted);">${p.size||'—'}</span></td>
+        <td><span style="font-size:12px;">${p.pos||'—'}</span></td>
+        <td>${debtHtml}</td>
+        <td onclick="event.stopPropagation()" style="text-align:right;">
+          <button class="btn btn-ghost btn-sm" onclick="openEditPlayer('${p.id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" style="margin-left:5px;" onclick="deletePlayer('${p.id}')">🗑</button>
+        </td>
+      </tr>`;
+    }).join('');
+    const jpgBtn = document.getElementById('generate-debt-jpg-btn');
+    if (jpgBtn) jpgBtn.style.display = playerDebtFilterActive ? '' : 'none';
+    renderJerseySummary();
+  };
+})();
+
+function openDebtJpgModal() {
+  const filter = (document.getElementById('player-filter')||{}).value||'';
+  debtJpgPlayers = state.players
+    .filter(p => p.name.toLowerCase().includes(filter.toLowerCase()) && playerTotalDebt(p.id) > 0)
+    .sort((a,b) => playerTotalDebt(b.id) - playerTotalDebt(a.id));
+  debtJpgSelected = new Set(debtJpgPlayers.map(p => p.id));
+  const list = document.getElementById('debt-jpg-player-list');
+  list.innerHTML = debtJpgPlayers.map(p => {
+    const debt = playerTotalDebt(p.id);
+    return `<div class="pcitem cp" id="djpg-${p.id}" onclick="toggleDebtJpgPlayer('${p.id}')" style="cursor:pointer;">
+      <div class="chkbox p" id="djpg-chk-${p.id}">✓</div>
+      <span style="flex:1;font-size:14px;font-weight:600;">${p.name}</span>
+      <span style="color:var(--red2);font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:14px;">−${debt.toLocaleString('cs')} Kč</span>
+    </div>`;
+  }).join('') || '<div style="padding:16px;color:var(--muted);text-align:center;">Žádní dlužníci.</div>';
+  openModal('modal-debt-jpg');
+}
+
+function toggleDebtJpgPlayer(pid) {
+  if (debtJpgSelected.has(pid)) {
+    debtJpgSelected.delete(pid);
+    const el = document.getElementById('djpg-'+pid);
+    if (el) el.className = 'pcitem';
+    const chk = document.getElementById('djpg-chk-'+pid);
+    if (chk) { chk.className = 'chkbox'; chk.textContent = ''; }
+  } else {
+    debtJpgSelected.add(pid);
+    const el = document.getElementById('djpg-'+pid);
+    if (el) el.className = 'pcitem cp';
+    const chk = document.getElementById('djpg-chk-'+pid);
+    if (chk) { chk.className = 'chkbox p'; chk.textContent = '✓'; }
+  }
+}
+
+function debtJpgSelectAll() {
+  debtJpgPlayers.forEach(p => {
+    debtJpgSelected.add(p.id);
+    const el = document.getElementById('djpg-'+p.id);
+    if (el) el.className = 'pcitem cp';
+    const chk = document.getElementById('djpg-chk-'+p.id);
+    if (chk) { chk.className = 'chkbox p'; chk.textContent = '✓'; }
+  });
+}
+
+function debtJpgDeselectAll() {
+  debtJpgPlayers.forEach(p => {
+    debtJpgSelected.delete(p.id);
+    const el = document.getElementById('djpg-'+p.id);
+    if (el) el.className = 'pcitem';
+    const chk = document.getElementById('djpg-chk-'+p.id);
+    if (chk) { chk.className = 'chkbox'; chk.textContent = ''; }
+  });
+}
+
+async function downloadDebtJpg() {
+  const selectedIds = debtJpgPlayers.filter(p => debtJpgSelected.has(p.id)).map(p => p.id);
+  if (!selectedIds.length) { alert('Vyber alespoň jednoho hráče.'); return; }
+  closeModal('modal-debt-jpg');
+  await generateDebtJpg(selectedIds);
+}
+
+function _rrf(ctx, x, y, w, h, r) {
+  let tl, tr, br, bl;
+  if (Array.isArray(r)) { [tl,tr,br,bl] = [r[0]||0,r[1]||0,r[2]||0,r[3]||0]; }
+  else { tl=tr=br=bl=r; }
+  ctx.beginPath();
+  ctx.moveTo(x+tl, y);
+  ctx.lineTo(x+w-tr, y);
+  ctx.quadraticCurveTo(x+w, y, x+w, y+tr);
+  ctx.lineTo(x+w, y+h-br);
+  ctx.quadraticCurveTo(x+w, y+h, x+w-br, y+h);
+  ctx.lineTo(x+bl, y+h);
+  ctx.quadraticCurveTo(x, y+h, x, y+h-bl);
+  ctx.lineTo(x, y+tl);
+  ctx.quadraticCurveTo(x, y, x+tl, y);
+  ctx.closePath();
+  ctx.fill();
+}
+
+async function generateDebtJpg(playerIds) {
+  await document.fonts.ready;
+
+  const playerData = playerIds.map(pid => {
+    const p = findPlayer(pid);
+    if (!p) return null;
+    const debt = playerTotalDebt(pid);
+    const seasons = [];
+    state.seasons.forEach(season => {
+      const fee = getFee(pid, season.id);
+      const items = getPlayerItems(pid, season.id);
+      if (!fee && !items.length) return;
+      const lineItems = [];
+      if (fee) {
+        const rem = Math.max(0, (fee.amount||0)-(fee.paid||0));
+        if (rem > 0) lineItems.push({ name: 'Poplatek', rem });
+      }
+      items.forEach(item => {
+        const rem = Math.max(0, (item.amount||0)-(item.paid||0));
+        if (rem > 0) lineItems.push({ name: item.name, rem });
+      });
+      if (lineItems.length > 0) seasons.push({ name: season.name, lineItems });
+      else if (fee || items.length) seasons.push({ name: season.name, lineItems: [] });
+    });
+    return { name: p.name, debt, seasons };
+  }).filter(Boolean).filter(pd => pd.debt > 0);
+
+  if (!playerData.length) return;
+
+  const W = 800;
+  const DARK='#0f1a10', RED='#e63946', RED2='#c1121f', MUTED='#6b7d6e';
+  const WHITE='#ffffff', BG='#eef1ee', BORDER='#dde5dd';
+  const HEADER_H=90, FOOTER_H=50;
+  const CARD_MX=20, CARD_GAP=12, INNER_PAD=18;
+  const ROW_PLAYER=50, ROW_SEASON=30, ROW_ITEM=34, CARD_PY=16;
+
+  const cardHeights = playerData.map(pd => {
+    let h = CARD_PY + ROW_PLAYER;
+    pd.seasons.forEach(s => {
+      h += ROW_SEASON;
+      h += s.lineItems.length * ROW_ITEM;
+    });
+    if (!pd.seasons.length) h += ROW_SEASON;
+    return h + CARD_PY;
+  });
+
+  let totalH = HEADER_H + 4 + CARD_GAP;
+  cardHeights.forEach(h => { totalH += h + CARD_GAP; });
+  totalH += FOOTER_H;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = totalH;
+  const ctx = canvas.getContext('2d');
+
+  // Background
+  ctx.fillStyle = BG; ctx.fillRect(0,0,W,totalH);
+
+  // Header
+  ctx.fillStyle = DARK; ctx.fillRect(0,0,W,HEADER_H);
+  ctx.fillStyle = RED;  ctx.fillRect(0,HEADER_H,W,4);
+
+  // Logo (circular clip)
+  const logoSz=52, logoX=20, logoY=(HEADER_H-logoSz)/2;
+  const logoImg = document.getElementById('header-logo');
+  try {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(logoX+logoSz/2, logoY+logoSz/2, logoSz/2, 0, Math.PI*2);
+    ctx.clip();
+    ctx.drawImage(logoImg, logoX, logoY, logoSz, logoSz);
+    ctx.restore();
+  } catch(e) {
+    ctx.restore();
+    ctx.fillStyle='#c1121f';
+    ctx.beginPath();
+    ctx.arc(logoX+logoSz/2, logoY+logoSz/2, logoSz/2, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  const tx = logoX+logoSz+14;
+  ctx.fillStyle='#4a7a4a';
+  ctx.font='700 11px "Barlow Condensed","Barlow",sans-serif';
+  ctx.fillText((appSettings.name||'Hokejbal').toUpperCase(), tx, logoY+17);
+
+  const latestSeason = state.seasons.length ? state.seasons[state.seasons.length-1].name : '';
+  ctx.fillStyle='#f8fafc';
+  ctx.font='900 36px "Barlow Condensed","Barlow",sans-serif';
+  ctx.fillText('Poplatky ' + latestSeason, tx, logoY+53);
+
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('cs-CZ',{day:'numeric',month:'numeric',year:'numeric'});
+  ctx.fillStyle='#8fa88f';
+  ctx.font='400 13px "Barlow",sans-serif';
+  ctx.textAlign='right';
+  ctx.fillText(dateStr, W-20, logoY+22);
+  ctx.textAlign='left';
+
+  // Cards
+  let y = HEADER_H+4+CARD_GAP;
+  const CW = W-CARD_MX*2;
+
+  playerData.forEach((pd, i) => {
+    const h = cardHeights[i];
+
+    // White card bg
+    ctx.fillStyle = WHITE; _rrf(ctx, CARD_MX, y, CW, h, 8);
+    // Red left border
+    ctx.fillStyle = RED;   _rrf(ctx, CARD_MX, y, 4, h, [8,0,0,8]);
+
+    const cx = CARD_MX+4+INNER_PAD;
+    const cr = CARD_MX+CW-INNER_PAD;
+    let ry = y+CARD_PY;
+
+    // Player name
+    ctx.fillStyle = DARK;
+    ctx.font='600 19px "Barlow",sans-serif';
+    ctx.fillText(pd.name, cx, ry+24);
+
+    // Total debt
+    ctx.fillStyle = RED2;
+    ctx.font='800 19px "Barlow Condensed","Barlow",sans-serif';
+    ctx.textAlign='right';
+    ctx.fillText('−'+pd.debt.toLocaleString('cs')+' Kč', cr, ry+24);
+    ctx.textAlign='left';
+    ry += ROW_PLAYER;
+
+    pd.seasons.forEach(s => {
+      // Season divider
+      ctx.strokeStyle=BORDER; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(cx, ry+0.5); ctx.lineTo(cr, ry+0.5); ctx.stroke();
+
+      ctx.fillStyle=MUTED;
+      ctx.font='700 12px "Barlow Condensed","Barlow",sans-serif';
+      ctx.fillText(s.name.toUpperCase(), cx+2, ry+21);
+      ry += ROW_SEASON;
+
+      s.lineItems.forEach(item => {
+        ctx.strokeStyle=BORDER; ctx.lineWidth=0.5;
+        ctx.beginPath(); ctx.moveTo(cx+10, ry+0.5); ctx.lineTo(cr, ry+0.5); ctx.stroke();
+
+        ctx.fillStyle=DARK;
+        ctx.font='400 14px "Barlow",sans-serif';
+        ctx.fillText(item.name, cx+18, ry+24);
+
+        ctx.fillStyle=MUTED;
+        ctx.font='400 13px "Barlow",sans-serif';
+        ctx.textAlign='right';
+        ctx.fillText('−'+item.rem.toLocaleString('cs')+' Kč', cr, ry+24);
+        ctx.textAlign='left';
+        ry += ROW_ITEM;
+      });
+    });
+
+    y += h+CARD_GAP;
+  });
+
+  // Footer
+  const fy = totalH-FOOTER_H;
+  ctx.fillStyle=DARK; ctx.fillRect(0,fy,W,FOOTER_H);
+  const totalDebt = playerData.reduce((s,pd)=>s+pd.debt,0);
+  ctx.fillStyle='#8fa88f';
+  ctx.font='400 14px "Barlow",sans-serif';
+  ctx.fillText(
+    `${playerData.length} hráčů · Celkem dluhů: ${totalDebt.toLocaleString('cs')} Kč`,
+    20, fy+32
+  );
+
+  // Download
+  canvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url;
+    const d = new Date();
+    a.download=`poplatky_${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}.jpg`;
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }, 'image/jpeg', 0.95);
+}
 </script>
 </body>
 </html>
